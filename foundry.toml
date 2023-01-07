@@ -1,0 +1,10 @@
+
+
+[profile.default]
+test = 'test'
+solc_version = '0.8.17'
+optimizer = true
+optimizer_runs = 1000000
+src = 'src'
+out = 'out'
+libs = ['lib']
