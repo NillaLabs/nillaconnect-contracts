@@ -58,7 +58,7 @@ contract IronBankNillaLendingPool is BaseNillaEarn {
         // collect protocol's fee.
         uint256 baseTokenBefore = baseToken.balanceOf(address(this));
         uint256 withdrawFee = (_shares * withdrawFeeBPS) / BPS;
-        reserves[address(baseToken)] += withdrawFee;
+        reserves[address(cToken)] += withdrawFee;
         // withdraw user's fund.
         require(cToken.redeem(_shares - withdrawFee) == 0, "!redeem");
         uint256 receivedBaseToken = baseToken.balanceOf(address(this)) - baseTokenBefore;
