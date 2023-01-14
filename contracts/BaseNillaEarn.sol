@@ -44,10 +44,6 @@ contract BaseNillaEarn is ERC20Upgradeable, ReentrancyGuardUpgradeable, OwnableU
         emit SetExecutor(_executor);
     }
 
-    function deposit(uint256 _amount, address _receiver) external virtual nonReentrant {}
-
-    function redeem(uint256 _shares, address _receiver) external virtual nonReentrant {}
-
     function setDepositFeeBPS(uint16 _depositFeeBPS) external onlyOwner {
         require(_depositFeeBPS <= 3, "fee too much"); // max fee = 0.03%
         depositFeeBPS = _depositFeeBPS;

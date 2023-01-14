@@ -35,7 +35,7 @@ contract IronBankNillaLendingPool is BaseNillaEarn {
         return _decimals;
     }
 
-    function deposit(uint256 _amount, address _receiver) external override nonReentrant {
+    function deposit(uint256 _amount, address _receiver) external nonReentrant {
         // transfer fund.
         uint256 baseTokenBefore = baseToken.balanceOf(address(this));
         baseToken.safeTransferFrom(msg.sender, address(this), _amount);
@@ -50,7 +50,7 @@ contract IronBankNillaLendingPool is BaseNillaEarn {
         _mint(_receiver, receivedCToken - depositFee);
     }
 
-    function redeem(uint256 _shares, address _receiver) external override nonReentrant {
+    function redeem(uint256 _shares, address _receiver) external nonReentrant {
         // set msgSender for cross chain tx.
         address msgSender = _msgSender(_receiver);
         // burn user's shares
