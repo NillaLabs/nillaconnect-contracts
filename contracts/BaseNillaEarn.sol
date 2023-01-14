@@ -15,7 +15,7 @@ contract BaseNillaEarn is ERC20Upgradeable, ReentrancyGuardUpgradeable, OwnableU
     mapping(address => uint256) reserves;
     uint16 public depositFeeBPS;
     uint16 public withdrawFeeBPS;
-    address public worker;
+    address public worker; // wallet to withdraw fee
     address public executor; // executor contract for cross chain
 
     /**
