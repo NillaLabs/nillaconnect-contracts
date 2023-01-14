@@ -5,11 +5,11 @@ pragma solidity 0.8.17;
 import "OpenZeppelin/openzeppelin-contracts@4.7.3/contracts/token/ERC20/IERC20.sol";
 import "OpenZeppelin/openzeppelin-contracts@4.7.3/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "./BaseNillaLendingPool.sol";
+import "../BaseNillaEarn.sol";
 
 import "../../interfaces/ICToken.sol";
 
-contract IronBankNillaLendingPool is BaseNillaLendingPool {
+contract IronBankNillaLendingPool is BaseNillaEarn {
     using SafeERC20 for IERC20;
 
     ICToken public cToken;

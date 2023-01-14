@@ -8,7 +8,7 @@ import "OpenZeppelin/openzeppelin-contracts-upgradeable@4.7.3/contracts/access/O
 import "OpenZeppelin/openzeppelin-contracts@4.7.3/contracts/token/ERC20/IERC20.sol";
 import "OpenZeppelin/openzeppelin-contracts@4.7.3/contracts/token/ERC20/utils/SafeERC20.sol";
 
-contract BaseNillaLendingPool is ERC20Upgradeable, ReentrancyGuardUpgradeable, OwnableUpgradeable {
+contract BaseNillaEarn is ERC20Upgradeable, ReentrancyGuardUpgradeable, OwnableUpgradeable {
     using SafeERC20 for IERC20;
     uint16 internal constant BPS = 10000;
 
