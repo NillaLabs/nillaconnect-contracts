@@ -1,5 +1,3 @@
-
-
 [profile.default]
 test = 'test'
 solc_version = '0.8.17'
