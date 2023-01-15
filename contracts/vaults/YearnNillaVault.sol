@@ -56,7 +56,7 @@ contract YearnNillaVault is BaseNillaEarn {
         uint256 depositFee = (receivedYVToken * depositFeeBPS) / BPS;
         reserves[address(yvToken)] += depositFee;
         _mint(_receiver, receivedYVToken - depositFee);
-        emit Deposit(msg.sender, _receiver, _amount)
+        emit Deposit(msg.sender, _receiver, _amount);
     }
 
     // NOTE: might add more param to match with yvToken's interface
@@ -68,7 +68,7 @@ contract YearnNillaVault is BaseNillaEarn {
         uint256 baseTokenBefore = baseToken.balanceOf(address(this));
         uint256 withdrawFee = (_shares * withdrawFeeBPS) / BPS;
         reserves[address(yvToken)] += withdrawFee;
-        yvToken.withdraw(_shares - withdrawFee, _receiver, _maxLoss)
+        yvToken.withdraw(_shares - withdrawFee, _receiver, _maxLoss);
         // withdraw user's fund.
         uint256 receivedBaseToken = baseToken.balanceOf(address(this)) - baseTokenBefore;
         // bridge token back if cross chain tx.
