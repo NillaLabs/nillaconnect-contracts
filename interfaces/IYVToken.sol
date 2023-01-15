@@ -3,9 +3,9 @@ pragma solidity 0.8.17;
 import "OpenZeppelin/openzeppelin-contracts@4.7.3/contracts/token/ERC20/IERC20.sol";
 
 interface IYVToken is IERC20 {
-    function pricePerShare() external view returns (uint256)
+    function decimals() external view returns (uint8);
 
-    function maxAvailableShares() external view returns (uint256);
+    function token() external view returns (address)
 
     function deposit(uint256, address) external returns (uint256);
 
