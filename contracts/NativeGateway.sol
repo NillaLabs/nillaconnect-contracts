@@ -11,7 +11,7 @@ contract NativeGateway {
     IWNative wNative;
 
     constructor(IWNative _wNative) {
-        wNative = wNative;
+        wNative = _wNative;
     }
 
     function deposit(INillaLendingPool _lendingPool) external payable {
