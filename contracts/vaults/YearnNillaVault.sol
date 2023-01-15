@@ -31,7 +31,8 @@ contract IronBankNillaLendingPool is BaseNillaEarn {
         __initialize__(_name, _symbol, _depositFeeBPS, _withdrawFeeBPS, _executor);
         // TODO: init variable
         yvToken = _yvToken;
-        
+        IERC20 _baseToken = IERC20(_yvToken.token());
+        _decimals = _yvToken.decimals();
     }
 
     function decimals() public view virtual override returns (uint8) {
@@ -45,18 +46,19 @@ contract IronBankNillaLendingPool is BaseNillaEarn {
         baseToken.safeTransferFrom(msg.sender, address(this), _amount);
         uint256 receivedBaseToken = baseToken.balanceOf(address(this)) - baseTokenBefore;
 
-        uint256 cTokenBefore = cToken.balanceOf(address(this));
+        uint256 yvTokenBefore = yvToken.balanceOf(address(this));
         // TODO:
+        yvToken.deposit(_amount, _receiver);
         // deposit to yearn.
-        uint256 receivedCToken = cToken.balanceOf(address(this)) - cTokenBefore;
+        uint256 receivedYVToken = yvToken.balanceOf(address(this)) - yvTokenBefore;
         // collect protocol's fee.
-        uint256 depositFee = (receivedCToken * depositFeeBPS) / BPS;
+        uint256 depositFee = (receivedYVToken * depositFeeBPS) / BPS;
         reserves[address(yvToken)] += depositFee;
-        _mint(_receiver, receivedCToken - depositFee);
+        _mint(_receiver, receivedYVToken - depositFee);
     }
 
     // NOTE: might add more param to match with yvToken's interface
-    function redeem(uint256 _shares, address _receiver) external nonReentrant {
+    function redeem(uint256 _shares, address _receiver, uint256 _maxLoss) external nonReentrant {
         // set msgSender for cross chain tx.
         address msgSender = _msgSender(_receiver);
         // burn user's shares
@@ -65,6 +67,7 @@ contract IronBankNillaLendingPool is BaseNillaEarn {
         uint256 withdrawFee = (_shares * withdrawFeeBPS) / BPS;
         reserves[address(yvToken)] += withdrawFee;
         // TODO:
+        yvToken.withdraw(_shares - withdrawFee, _receiver, _maxLoss)
         // withdraw user's fund.
         uint256 receivedBaseToken = baseToken.balanceOf(address(this)) - baseTokenBefore;
         // bridge token back if cross chain tx.
