@@ -7,14 +7,14 @@ import "OpenZeppelin/openzeppelin-contracts@4.7.3/contracts/token/ERC20/utils/Sa
 
 import "../BaseNillaEarn.sol";
 
-import "../../interfaces/IYVToken.sol"; // TODO: add interface
+import "../../interfaces/IYVToken.sol";
 
 // NOTE: not sure that yearn have lm process or not?
 // if yes how to get it and implement auto-compound
 contract IronBankNillaLendingPool is BaseNillaEarn {
     using SafeERC20 for IERC20;
 
-    IYearnVault public yvToken;
+    IYVToken public yvToken;
     IERC20 public baseToken;
     uint8 private _decimals;
 
@@ -30,6 +30,8 @@ contract IronBankNillaLendingPool is BaseNillaEarn {
     ) external {
         __initialize__(_name, _symbol, _depositFeeBPS, _withdrawFeeBPS, _executor);
         // TODO: init variable
+        yvToken = _yvToken;
+        
     }
 
     function decimals() public view virtual override returns (uint8) {
