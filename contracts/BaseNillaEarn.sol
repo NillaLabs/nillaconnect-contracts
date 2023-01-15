@@ -15,8 +15,9 @@ contract BaseNillaEarn is ERC20Upgradeable, ReentrancyGuardUpgradeable, OwnableU
     mapping(address => uint256) reserves;
     uint16 public depositFeeBPS;
     uint16 public withdrawFeeBPS;
-    address public worker;
-    address public executor; // executor contract for cross chain
+    address public worker; // wallet to withdraw fee
+    address public executor; // executor contract for cross chain tx
+    address public bridge; // bridge contract to bridge token cross chain
 
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
@@ -30,15 +31,15 @@ contract BaseNillaEarn is ERC20Upgradeable, ReentrancyGuardUpgradeable, OwnableU
     event SetWithdrawFee(uint256);
     event WithdrawReserve(address indexed token, address worker, uint256 amount);
     event SetExecutor(address);
-    event Deposit(address indexed depositor, uint256 amount);
-    event Withdraw(address indexed withdrawer, uint256 amount);
+    event SetBridge(address);
 
     function __initialize__(
         string memory _name,
         string memory _symbol,
         uint16 _depositFeeBPS,
         uint16 _withdrawFeeBPS,
-        address _executor
+        address _executor,
+        address _bridge
     ) internal initializer {
         __ERC20_init(_name, _symbol);
         __ReentrancyGuard_init();
@@ -46,9 +47,11 @@ contract BaseNillaEarn is ERC20Upgradeable, ReentrancyGuardUpgradeable, OwnableU
         depositFeeBPS = _depositFeeBPS;
         withdrawFeeBPS = _withdrawFeeBPS;
         executor = _executor;
+        bridge = _bridge;
         emit SetDepositFee(_depositFeeBPS);
         emit SetWithdrawFee(_withdrawFeeBPS);
         emit SetExecutor(_executor);
+        emit SetBridge(_bridge);
     }
 
     function setDepositFeeBPS(uint16 _depositFeeBPS) external onlyOwner {
@@ -68,7 +71,17 @@ contract BaseNillaEarn is ERC20Upgradeable, ReentrancyGuardUpgradeable, OwnableU
         emit SetWorker(_worker);
     }
 
-    function withdrawReserve(address _token, uint256 _amount) external {
+    function setExecutor(address _executor) external onlyOwner {
+        executor = _executor;
+        emit SetExecutor(_executor);
+    }
+
+    function setBridge(address _bridge) external onlyOwner {
+        bridge = _bridge;
+        emit SetBridge(_bridge);
+    }
+
+    function withdrawReserve(address _token, uint256 _amount) external virtual {
         require(msg.sender == worker, "only worker");
         reserves[_token] -= _amount;
         IERC20(_token).safeTransfer(msg.sender, _amount);
