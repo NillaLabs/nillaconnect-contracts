@@ -81,7 +81,7 @@ contract BaseNillaEarn is ERC20Upgradeable, ReentrancyGuardUpgradeable, OwnableU
         emit SetBridge(_bridge);
     }
 
-    function withdrawReserve(address _token, uint256 _amount) external {
+    function withdrawReserve(address _token, uint256 _amount) external virtual {
         require(msg.sender == worker, "only worker");
         reserves[_token] -= _amount;
         IERC20(_token).safeTransfer(msg.sender, _amount);
