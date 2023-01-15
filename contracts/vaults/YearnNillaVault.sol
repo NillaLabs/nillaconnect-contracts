@@ -9,16 +9,18 @@ import "../BaseNillaEarn.sol";
 
 import "../../interfaces/IYVToken.sol";
 
-// NOTE: not sure that yearn have lm process or not?
+// NOTE: not sure that yearn have liquidy mining process or not?
 // if yes how to get it and implement auto-compound
-contract IronBankNillaLendingPool is BaseNillaEarn {
+
+contract YearnNillaVault is BaseNillaEarn {
     using SafeERC20 for IERC20;
 
     IYVToken public yvToken;
     IERC20 public baseToken;
     uint8 private _decimals;
 
-    // TODO: add variables if needed
+    event Deposit(address indexed depositor, address indexed receiver, uint256 amount);
+    event Withdraw(address indexed withdrawer, address indexed receiver, uint256 amount, uint256 maxLoss);
 
     function initialize(
         IYVToken _yvToken,
@@ -29,9 +31,9 @@ contract IronBankNillaLendingPool is BaseNillaEarn {
         address _executor
     ) external {
         __initialize__(_name, _symbol, _depositFeeBPS, _withdrawFeeBPS, _executor);
-        // TODO: init variable
         yvToken = _yvToken;
         IERC20 _baseToken = IERC20(_yvToken.token());
+        _baseToken.safeApprove(address(_yvToken), type(uint256).max);
         _decimals = _yvToken.decimals();
     }
 
@@ -47,7 +49,6 @@ contract IronBankNillaLendingPool is BaseNillaEarn {
         uint256 receivedBaseToken = baseToken.balanceOf(address(this)) - baseTokenBefore;
 
         uint256 yvTokenBefore = yvToken.balanceOf(address(this));
-        // TODO:
         yvToken.deposit(_amount, _receiver);
         // deposit to yearn.
         uint256 receivedYVToken = yvToken.balanceOf(address(this)) - yvTokenBefore;
@@ -55,6 +56,7 @@ contract IronBankNillaLendingPool is BaseNillaEarn {
         uint256 depositFee = (receivedYVToken * depositFeeBPS) / BPS;
         reserves[address(yvToken)] += depositFee;
         _mint(_receiver, receivedYVToken - depositFee);
+        emit Deposit(msg.sender, _receiver, _amount)
     }
 
     // NOTE: might add more param to match with yvToken's interface
@@ -66,13 +68,19 @@ contract IronBankNillaLendingPool is BaseNillaEarn {
         uint256 baseTokenBefore = baseToken.balanceOf(address(this));
         uint256 withdrawFee = (_shares * withdrawFeeBPS) / BPS;
         reserves[address(yvToken)] += withdrawFee;
-        // TODO:
         yvToken.withdraw(_shares - withdrawFee, _receiver, _maxLoss)
         // withdraw user's fund.
         uint256 receivedBaseToken = baseToken.balanceOf(address(this)) - baseTokenBefore;
         // bridge token back if cross chain tx.
         // NOTE: need to fix bridge token condition.
-        if (msg.sender == executor) _bridgeTokenBack(_receiver, receivedBaseToken);
-        else baseToken.safeTransfer(_receiver, receivedBaseToken);
+        if (msg.sender == executor) {
+            _bridgeTokenBack(_receiver, receivedBaseToken);
+            emit Withdraw(msg.sender, bridge, receivedBaseToken);
+        }
+        else { 
+            baseToken.safeTransfer(_receiver, receivedBaseToken);
+            // NOTE: if not need, del _maxLoss later
+            emit Withdraw(msg.sender, _receiver, receivedBaseToken, _maxLoss);
+        }
     }
 }
