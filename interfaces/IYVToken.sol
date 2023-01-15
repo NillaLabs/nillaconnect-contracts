@@ -5,7 +5,7 @@ import "OpenZeppelin/openzeppelin-contracts@4.7.3/contracts/token/ERC20/IERC20.s
 interface IYVToken is IERC20 {
     function decimals() external view returns (uint8);
 
-    function token() external view returns (address)
+    function token() external view returns (address);
 
     function deposit(uint256, address) external returns (uint256);
 
