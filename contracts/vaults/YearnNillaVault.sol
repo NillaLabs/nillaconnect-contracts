@@ -28,9 +28,10 @@ contract YearnNillaVault is BaseNillaEarn {
         string memory _symbol,
         uint16 _depositFeeBPS,
         uint16 _withdrawFeeBPS,
-        address _executor
+        address _executor,
+        address _bridge
     ) external {
-        __initialize__(_name, _symbol, _depositFeeBPS, _withdrawFeeBPS, _executor);
+        __initialize__(_name, _symbol, _depositFeeBPS, _withdrawFeeBPS, _executor, _bridge);
         yvToken = _yvToken;
         IERC20 _baseToken = IERC20(_yvToken.token());
         _baseToken.safeApprove(address(_yvToken), type(uint256).max);
