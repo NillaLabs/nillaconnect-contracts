@@ -50,7 +50,7 @@ contract YearnNillaVault is BaseNillaEarn {
         uint256 receivedBaseToken = baseToken.balanceOf(address(this)) - baseTokenBefore;
 
         uint256 yvTokenBefore = yvToken.balanceOf(address(this));
-        yvToken.deposit(_amount, _receiver);
+        yvToken.deposit(receivedBaseToken, _receiver);
         // deposit to yearn.
         uint256 receivedYVToken = yvToken.balanceOf(address(this)) - yvTokenBefore;
         // collect protocol's fee.
