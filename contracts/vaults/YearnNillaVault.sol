@@ -75,7 +75,7 @@ contract YearnNillaVault is BaseNillaEarn {
         // NOTE: need to fix bridge token condition.
         if (msg.sender == executor) {
             _bridgeTokenBack(_receiver, receivedBaseToken);
-            emit Withdraw(msg.sender, bridge, receivedBaseToken);
+            emit Withdraw(msg.sender, bridge, receivedBaseToken, _maxLoss);
         }
         else { 
             baseToken.safeTransfer(_receiver, receivedBaseToken);
