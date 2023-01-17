@@ -33,8 +33,9 @@ contract YearnNillaVault is BaseNillaEarn {
     ) external {
         __initialize__(_name, _symbol, _depositFeeBPS, _withdrawFeeBPS, _executor, _bridge);
         yvToken = _yvToken;
-        IERC20 _baseToken = IERC20(_yvToken.token());
-        _baseToken.safeApprove(address(_yvToken), type(uint256).max);
+        IERC20 _baseToken = IERC20(address(_yvToken.token()));
+        baseToken = _baseToken;
+        baseToken.safeApprove(address(_yvToken), type(uint256).max);
         _decimals = _yvToken.decimals();
     }
 
@@ -44,18 +45,22 @@ contract YearnNillaVault is BaseNillaEarn {
 
     // NOTE: might add more param to match with yvToken's interface
     function deposit(uint256 _amount, address _receiver) external nonReentrant {
-        // transfer fund.
-        uint256 baseTokenBefore = baseToken.balanceOf(address(this));
-        baseToken.safeTransferFrom(msg.sender, address(this), _amount);
-        uint256 receivedBaseToken = baseToken.balanceOf(address(this)) - baseTokenBefore;
+        //gas saving
+        IERC20 _baseToken = baseToken;
+        IYVToken _yvToken = yvToken;
 
-        uint256 yvTokenBefore = yvToken.balanceOf(address(this));
-        yvToken.deposit(receivedBaseToken, _receiver);
+        // transfer fund.
+        uint256 baseTokenBefore = _baseToken.balanceOf(address(this));
+        _baseToken.safeTransferFrom(msg.sender, address(this), _amount);
+        uint256 receivedBaseToken = _baseToken.balanceOf(address(this)) - baseTokenBefore;
+
+        uint256 yvTokenBefore = _yvToken.balanceOf(address(this));
+        _yvToken.deposit(receivedBaseToken, _receiver);
         // deposit to yearn.
-        uint256 receivedYVToken = yvToken.balanceOf(address(this)) - yvTokenBefore;
+        uint256 receivedYVToken = _yvToken.balanceOf(address(this)) - yvTokenBefore;
         // collect protocol's fee.
         uint256 depositFee = (receivedYVToken * depositFeeBPS) / BPS;
-        reserves[address(yvToken)] += depositFee;
+        reserves[address(_yvToken)] += depositFee;
         _mint(_receiver, receivedYVToken - depositFee);
         emit Deposit(msg.sender, _receiver, _amount);
     }
