@@ -1,4 +1,5 @@
 /build
-/cache
+/cache/*
 /reports
 /out
+vault.vy
