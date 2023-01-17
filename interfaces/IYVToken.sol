@@ -10,4 +10,14 @@ interface IYVToken is IERC20 {
     function deposit(uint256, address) external returns (uint256);
 
     function withdraw(uint256, address, uint256) external returns (uint256);
+
+    // FOR TESTING
+    function totalSupply() external view returns (uint256);
+
+    function depositLimit() external view returns (uint256);
+
+    function apiVersion() external pure returns (string memory);
+
+    function name() external view returns (string memory);
+
 }
