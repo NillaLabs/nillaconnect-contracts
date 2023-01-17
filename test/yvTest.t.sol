@@ -28,7 +28,7 @@ contract YVTest is Test {
     uint256 mainnetFork;
 
     IERC20 baseToken; 
-    IYVToken internal yvToken = IYVToken(address(0xa354F35829Ae975e850e23e9615b11Da1B3dC4DE)); //WETH
+    IYVToken internal yvToken = IYVToken(address(0xa258C4606Ca8206D8aA700cE2143D7db854D168c)); //WETH
 
     event Deposit(address indexed depositor, address indexed receiver, uint256 amount);
     event Withdraw(address indexed withdrawer, address indexed receiver, uint256 amount, uint256 maxLoss);
@@ -82,7 +82,8 @@ contract YVTest is Test {
 
     function testDepisitWithFuzzer(uint256 amount) public {
         // deposit with any amount that more 0 and not exceed (depositLimit - totalSupply), also not exceed the balance of spender.
-        uint256 totalAssets = yvToken.totalDebt() + yvToken.totalIdle();
+        IERC20 _token = IERC20(yvToken.token());
+        uint256 totalAssets = yvToken.totalDebt() + _token.balanceOf(address(yvToken));
         uint256 maxLimit = yvToken.depositLimit() - totalAssets;
         vm.assume(amount < maxLimit && amount > 0 && amount < baseToken.balanceOf(address(executor)));
         vault.deposit(amount, receiver);
