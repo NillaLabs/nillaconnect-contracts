@@ -88,7 +88,7 @@ contract BaseNillaEarn is ERC20Upgradeable, ReentrancyGuardUpgradeable, OwnableU
         emit WithdrawReserve(msg.sender, _token, _amount);
     }
 
-    function _msgSender(address _user) internal returns (address msgSender) {
+    function _msgSender(address _user) internal view returns (address msgSender) { //NOTE: view is to be deleted, add to ignore the msg when testing
         if (msg.sender == executor) {
             // TODO: have to check a prove that cross chain tx is valid.
             // 1.validate
