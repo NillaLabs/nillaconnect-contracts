@@ -28,7 +28,7 @@ contract YVTest is Test {
     uint256 mainnetFork;
 
     IERC20 baseToken; 
-    IYVToken internal yvToken = IYVToken(address(0xa258C4606Ca8206D8aA700cE2143D7db854D168c));
+    IYVToken internal yvToken = IYVToken(address(0xa354F35829Ae975e850e23e9615b11Da1B3dC4DE)); //WETH
 
     event Deposit(address indexed depositor, address indexed receiver, uint256 amount);
     event Withdraw(address indexed withdrawer, address indexed receiver, uint256 amount, uint256 maxLoss);
@@ -53,27 +53,40 @@ contract YVTest is Test {
         baseToken = IERC20(address(vault.baseToken()));
         deal(address(baseToken), address(executor), 10_000_000);
         deal(address(baseToken), address(vault), 10_000_000);
+        baseToken.safeApprove(address(vault), type(uint256).max);
+        _checkInfo();
     }
 
-    function testDepositNormal() public {
+    function _checkInfo() internal view {
         console.log("Vault address:", address(vault));
         console.log("Vault balance:", baseToken.balanceOf(address(vault)));
-        console.log("Yearn total supply:", yvToken.totalSupply());
         console.log("Yearn deposit limit:", yvToken.depositLimit());
-        console.log("Yearn vault api:", yvToken.apiVersion());
         console.log("Yearn vault name:", yvToken.name());
-
-        uint256 amount = 1_000;
-        baseToken.safeApprove(address(vault), 1_000_000);
-        vault.deposit(amount, receiver);
     }
+    
+    // function testDepositNormal() public {
+    //     uint256 amount = 1_000;
+
+    //     vm.expectEmit(true, false, true, true);
+    //     emit Deposit(address(executor), address(receiver), amount);
+
+    //     vault.deposit(amount, receiver);
+    // }
 
     // function testDepositZeroAmount() public {
     //     uint256 amount = 0;
-    //     YearnNillaVault(address(proxy)).deposit(amount, receiver);
-    //     // vm.expectRevert()
-    //     // expect revert?
+
+    //     vm.expectRevert();
+    //     vault.deposit(amount, receiver);
     // }
+
+    function testDepisitWithFuzzer(uint256 amount) public {
+        // deposit with any amount that more 0 and not exceed (depositLimit - totalSupply), also not exceed the balance of spender.
+        uint256 totalAssets = yvToken.totalDebt() + yvToken.totalIdle();
+        uint256 maxLimit = yvToken.depositLimit() - totalAssets;
+        vm.assume(amount < maxLimit && amount > 0 && amount < baseToken.balanceOf(address(executor)));
+        vault.deposit(amount, receiver);
+    }
 
     // function redeemNormal() public {
     //     uint256 shares = 100; //how to check share owned?
