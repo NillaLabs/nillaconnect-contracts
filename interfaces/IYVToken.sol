@@ -16,4 +16,6 @@ interface IYVToken is IERC20 {
 
     function name() external view returns (string memory);
 
+    function totalDebt() external view returns (uint256);
+
 }
