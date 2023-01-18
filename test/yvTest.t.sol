@@ -24,6 +24,7 @@ contract YVTest is Test {
     
     // vault
     YearnNillaVault internal vault;
+    uint256 yvTotalAssets;
 
     uint256 mainnetFork;
 
@@ -34,8 +35,9 @@ contract YVTest is Test {
     event Withdraw(address indexed withdrawer, address indexed receiver, uint256 amount, uint256 maxLoss);
 
     function setUp() public {
-        mainnetFork = vm.createFork("https://mainnet.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161");
+        mainnetFork = vm.createFork("https://mainnet.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161"); // ETH Mainnet
         vm.selectFork(mainnetFork);
+        startHoax(address(executor));
         
         admin = address(new ProxyAdminImpl());
         impl  = address(new YearnNillaVault());
@@ -47,13 +49,16 @@ contract YVTest is Test {
             abi.encodeWithSelector(YearnNillaVault.initialize.selector, yvToken, "USDC Vault", "USDC", 1, 1, executor, address(0))
         );
 
-        startHoax(address(executor));
-
         vault = YearnNillaVault(address(proxy));
+
+        IERC20 _token = IERC20(yvToken.token());
+        yvTotalAssets = yvToken.totalDebt() + _token.balanceOf(address(yvToken));
+
         baseToken = IERC20(address(vault.baseToken()));
         deal(address(baseToken), address(executor), 10_000_000);
         deal(address(baseToken), address(vault), 10_000_000);
         baseToken.safeApprove(address(vault), type(uint256).max);
+
         _checkInfo();
     }
 
@@ -80,46 +85,58 @@ contract YVTest is Test {
     //     vault.deposit(amount, receiver);
     // }
 
-    function testDepisitWithFuzzer(uint256 amount) public {
-        // deposit with any amount that more 0 and not exceed (depositLimit - totalSupply), also not exceed the balance of spender.
-        IERC20 _token = IERC20(yvToken.token());
-        uint256 totalAssets = yvToken.totalDebt() + _token.balanceOf(address(yvToken));
-        uint256 maxLimit = yvToken.depositLimit() - totalAssets;
-        vm.assume(amount < maxLimit && amount > 0 && amount < baseToken.balanceOf(address(executor)));
+    // function testDepositOneAmount() public {
+    //     uint256 amount = 1;  //when deposit amount = 1; Reverted("Log != expected log")
+
+    //     vm.expectRevert();
+    //     vault.deposit(amount, receiver);
+    // }
+
+    // function testDepisitWithFuzzer(uint256 amount) public {
+    //     // deposit with any amount that more 0 and not exceed (depositLimit - totalSupply), also not exceed the balance of spender.
+    //     IERC20 _token = IERC20(yvToken.token());
+    //     uint256 totalAssets = yvToken.totalDebt() + _token.balanceOf(address(yvToken));
+    //     uint256 maxLimit = yvToken.depositLimit() - totalAssets;
+    //     vm.assume(amount < maxLimit && amount > 1 && amount < baseToken.balanceOf(address(executor)));
+    //     vault.deposit(amount, receiver);
+    // }
+
+    function testRedeemNormal() public {
+        uint256 amount = 1_000_000;
         vault.deposit(amount, receiver);
+
+        uint256 shares = yvToken.balanceOf(address(executor));
+        // uint256 maxLoss = 1;
+        // vault.redeem(shares, receiver, maxLoss);
+        console.log("Share in yearn:", shares);
+        console.log("Share in vault:", vault.checkSharesForAddress(address(executor)));
     }
 
-    // function redeemNormal() public {
-    //     uint256 shares = 100; //how to check share owned?
-    //     uint256 maxLoss = 1;
-    //     YearnNillaVault(address(proxy)).redeem(shares, receiver, maxLoss);
-    // }
-
-    // function redeemExceedingShares() public {
+    // function testRedeemExceedingShares() public {
     //     uint256 shares = 1_000_000;
     //     uint256 maxLoss = 1;
-    //     YearnNillaVault(address(proxy)).redeem(shares, receiver, maxLoss);
+    //     vault.redeem(shares, receiver, maxLoss);
     //     // revert
     // }
 
-    // function redeemZeroShare() public {
+    // function testRedeemZeroShare() public {
     //     uint256 shares = 0;
     //     uint256 maxLoss = 1;
-    //     YearnNillaVault(address(proxy)).redeem(shares, receiver, maxLoss);
+    //     vault.redeem(shares, receiver, maxLoss);
     //     // revert
     // }
 
-    // function redeemExceedingMaxLoss() public {
+    // function testRedeemExceedingMaxLoss() public {
     //     uint256 shares = 100;
     //     uint256 maxLoss = 10_100;
-    //     YearnNillaVault(address(proxy)).redeem(shares, receiver, maxLoss);
+    //     vault.redeem(shares, receiver, maxLoss);
     //     // revert
     // }
 
-    // function redeemZeroMaxLoss() public {
+    // function testRedeemZeroMaxLoss() public {
     //     uint256 shares = 100;
     //     uint256 maxLoss = 0;
-    //     YearnNillaVault(address(proxy)).redeem(shares, receiver, maxLoss);
+    //     vault.redeem(shares, receiver, maxLoss);
     //     // revert
     // }
 }
