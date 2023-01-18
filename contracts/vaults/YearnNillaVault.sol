@@ -19,6 +19,8 @@ contract YearnNillaVault is BaseNillaEarn {
     IERC20 public baseToken;
     uint8 private _decimals;
 
+    mapping(address => uint256) shares;
+
     event Deposit(address indexed depositor, address indexed receiver, uint256 amount);
     event Withdraw(address indexed withdrawer, address indexed receiver, uint256 amount, uint256 maxLoss);
 
@@ -55,7 +57,7 @@ contract YearnNillaVault is BaseNillaEarn {
         uint256 receivedBaseToken = _baseToken.balanceOf(address(this)) - baseTokenBefore;
 
         uint256 yvTokenBefore = _yvToken.balanceOf(address(this));
-        _yvToken.deposit(receivedBaseToken, _receiver);
+        shares[msg.sender] = _yvToken.deposit(receivedBaseToken, _receiver);
         // deposit to yearn.
         uint256 receivedYVToken = _yvToken.balanceOf(address(this)) - yvTokenBefore;
         // collect protocol's fee.
@@ -74,7 +76,7 @@ contract YearnNillaVault is BaseNillaEarn {
         uint256 baseTokenBefore = baseToken.balanceOf(address(this));
         uint256 withdrawFee = (_shares * withdrawFeeBPS) / BPS;
         reserves[address(yvToken)] += withdrawFee;
-        yvToken.withdraw(_shares - withdrawFee, _receiver, _maxLoss);
+        yvToken.withdraw(_shares - withdrawFee, _receiver, _maxLoss); // it could return amount the user received from shares
         // withdraw user's fund.
         uint256 receivedBaseToken = baseToken.balanceOf(address(this)) - baseTokenBefore;
         // bridge token back if cross chain tx.
@@ -88,5 +90,10 @@ contract YearnNillaVault is BaseNillaEarn {
             // NOTE: if not need, del _maxLoss later
             emit Withdraw(msg.sender, _receiver, receivedBaseToken, _maxLoss);
         }
+    }
+
+    // check total shares the user owns.
+    function checkSharesForAddress(address _owner) external view returns(uint256) {
+        return shares[_owner];
     }
 }
