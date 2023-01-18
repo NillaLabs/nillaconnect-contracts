@@ -12,7 +12,7 @@ contract BaseNillaEarn is ERC20Upgradeable, ReentrancyGuardUpgradeable, OwnableU
     using SafeERC20 for IERC20;
     uint16 internal constant BPS = 10000;
 
-    mapping(address => uint256) reserves;
+    mapping(address => uint256) public reserves;
     uint16 public depositFeeBPS;
     uint16 public withdrawFeeBPS;
     address public worker; // wallet to withdraw fee
