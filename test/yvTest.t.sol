@@ -54,8 +54,8 @@ contract YVTest is Test {
         yvTotalAssets = yvToken.totalDebt() + _token.balanceOf(address(yvToken));
 
         baseToken = IERC20(address(vault.baseToken()));
-        deal(address(baseToken), user, 1_000_000);
-        deal(address(baseToken), address(vault), 1_000_000);
+        deal(address(baseToken), user, 1e18);
+        deal(address(baseToken), address(vault), 1e18);
         baseToken.safeApprove(address(vault), type(uint256).max);
 
         _checkInfo();
@@ -63,7 +63,7 @@ contract YVTest is Test {
 
     function _checkInfo() internal view {
         IERC20 _token = IERC20(yvToken.token());
-        console.log("---------- START CHECKING INFO ----------");
+        console.log("---------- CHECKING INFO ----------");
         console.log("Vault address:", address(vault));
         console.log("Vault balance:", baseToken.balanceOf(address(vault)));
         console.log("Yearn deposit limit:", yvToken.depositLimit());
@@ -74,27 +74,23 @@ contract YVTest is Test {
     
     function testDepositNormal() public {
         console.log("---------- TEST NORMAL DEPOSIT ----------");
-        uint256 amount = 1_000_000;
+        uint256 amount = 1e18;
 
-        vm.expectEmit(true, false, true, true);
-        emit Deposit(address(user), address(user), amount);
-
-        uint256 sharesBefore = vault.checkSharesForAddress(user);
         uint256 balanceInYearnBefore = yvToken.balanceOf(address(vault));
-        uint256 reservedAmountBefore = vault.getReserves(address(yvToken));
+        uint256 reservesBeforeDeposit = vault.reserves(address(yvToken));
         
         vault.deposit(amount, user);
 
-        uint256 sharesAfter = vault.checkSharesForAddress(user);
         uint256 balanceInYearnAfter = yvToken.balanceOf(address(vault));
-        uint256 reservedAmountAfter = vault.getReserves(address(yvToken));
-        uint256 depositFee = ((sharesAfter - sharesBefore) * yvToken.pricePerShare()) * 3 / 10_000;  //depositFeeBPS = 0.03%, BPS = 100%
-        assertEq(reservedAmountAfter - reservedAmountBefore, depositFee);
+        uint256 reservesAfterDeposit = vault.reserves(address(yvToken));
+        uint256 depositFee = (balanceInYearnAfter - balanceInYearnBefore) * 3 / 10_000;  //depositFeeBPS = 0.03%, BPS = 100%
+
+        assertEq(reservesAfterDeposit - reservesBeforeDeposit, depositFee);
 
         console.log("Vault balance in yearn before:", balanceInYearnBefore);
         console.log("Vault balance in yearn after:", balanceInYearnAfter);
-        console.log("Reserves before:", reservedAmountBefore);
-        console.log("Reserves after:", reservedAmountAfter);
+        console.log("Reserves before:", reservesBeforeDeposit);
+        console.log("Reserves after:", reservesAfterDeposit);
     }
 
     function testDepositZeroAmount() public {
@@ -117,27 +113,22 @@ contract YVTest is Test {
         IERC20 _token = IERC20(yvToken.token());
         uint256 totalAssets = yvToken.totalDebt() + _token.balanceOf(address(yvToken));
         uint256 maxLimit = yvToken.depositLimit() - totalAssets;
-        vm.assume(amount < maxLimit && amount > 1 && amount < baseToken.balanceOf(address(user)));
+        vm.assume(amount < maxLimit && amount > 1 && amount <= baseToken.balanceOf(address(user)));
 
-        vm.expectEmit(true, true, false, true, address(vault));
-        emit Deposit(address(user), address(user), amount);
-
-        uint256 sharesBefore = vault.checkSharesForAddress(user);
         uint256 balanceInYearnBefore = yvToken.balanceOf(address(vault));
-        uint256 reservedAmountBefore = vault.getReserves(address(yvToken));
+        uint256 reservesBeforeDeposit = vault.reserves(address(yvToken));
         
         vault.deposit(amount, user);
 
-        uint256 sharesAfter = vault.checkSharesForAddress(user);
         uint256 balanceInYearnAfter = yvToken.balanceOf(address(vault));
-        uint256 reservedAmountAfter = vault.getReserves(address(yvToken));
-        uint256 depositFee = ((sharesAfter - sharesBefore) * yvToken.pricePerShare()) * 3 / 10_000;  //depositFeeBPS = 0.03%, BPS = 100%
-        assertEq(reservedAmountAfter - reservedAmountBefore, depositFee);
+        uint256 reservesAfterDeposit = vault.reserves(address(yvToken));
+        uint256 depositFee = (balanceInYearnAfter - balanceInYearnBefore) * 3 / 10_000;  //depositFeeBPS = 0.03%, BPS = 100%
+        assertEq(reservesAfterDeposit - reservesBeforeDeposit, depositFee);
 
         console.log("Vault balance in yearn before:", balanceInYearnBefore);
         console.log("Vault balance in yearn after:", balanceInYearnAfter);
-        console.log("Reserves before:", reservedAmountBefore);
-        console.log("Reserves after:", reservedAmountAfter);
+        console.log("Reserves before:", reservesBeforeDeposit);
+        console.log("Reserves after:", reservesAfterDeposit);
     }
 
     function testRedeemNormal() public {
@@ -145,40 +136,66 @@ contract YVTest is Test {
         IERC20 _token = vault.baseToken();
         uint256 maxLoss = 1;
         uint256 amount = 10_000;
-        uint256 reservedBeforeDeposit = vault.getReserves(address(yvToken));
-        
-        vm.expectEmit(true, true, false, true, address(vault));
-        emit Deposit(address(user), address(user), amount);
+        uint256 reservesBeforeDeposit = vault.reserves(address(yvToken));
 
         vault.deposit(amount, user);
         
-        uint256 reservedAfterDeposit = vault.getReserves(address(yvToken));
-        uint256 shares = vault.checkSharesForAddress(user);
+        uint256 reservesAfterDeposit = vault.reserves(address(yvToken));
         uint256 baseTokenBefore = _token.balanceOf(user);
 
-        // NOTE: event has too many params, can't expect the emit ???
-        // vm.expectEmit(true, true, true, true, address(vault));
-        // emit Withdraw(user, user, amount, maxLoss);
-
-        vault.redeem(shares, user, maxLoss);
-        uint256 reservedAfterWithdraw = vault.getReserves(address(yvToken));
+        uint256 shares = vault.balanceOf(user);
+        vault.redeem(vault.balanceOf(user), user, maxLoss);
+        uint256 reservesAfterWithdraw = vault.reserves(address(yvToken));
         uint256 baseTokenAfter = _token.balanceOf(user);
         uint256 withdrawFee = shares * 3 / 10_000; // withdrawFeeBPS = 0.03% BPS 100%
 
-        assertEq(withdrawFee, reservedAfterWithdraw - reservedAfterDeposit);
+        assertEq(withdrawFee, reservesAfterWithdraw - reservesAfterDeposit);
+        require((baseTokenAfter - baseTokenBefore) <= amount, "Received token exceed amount in");
 
-        console.log("Reserves before deposit:", reservedBeforeDeposit);
-        console.log("Reserves after deposit:", reservedAfterDeposit);
-        console.log("Reserves after withdraw:", vault.getReserves(address(yvToken)));
-        console.log("Withdraw fee:", withdrawFee);
-        console.log("User's shares in vault:", shares);
+        console.log("Reserves before deposit:", reservesBeforeDeposit);
+        console.log("Reserves after deposit:", reservesAfterDeposit);
+        console.log("Reserves after withdraw:", vault.reserves(address(yvToken)));
+        console.log("Withdraw fee:", withdrawFee); 
+        console.log("Received amount:", baseTokenAfter - baseTokenBefore);
+        console.log("Balance of baseToken before:", baseTokenBefore);
+        console.log("Balance of baseToken after:", baseTokenAfter);
+    }
+
+    function testRedeemWithFuzzy(uint256 amount) public {
+        console.log("---------- TEST FUZZY REDEEM ----------");
+        IERC20 _token = vault.baseToken();
+        uint256 totalAssets = yvToken.totalDebt() + _token.balanceOf(address(yvToken));
+        uint256 maxLimit = yvToken.depositLimit() - totalAssets;
+        amount = bound(amount, 10, maxLimit);
+        deal(address(baseToken), user, amount);
+        uint256 maxLoss = 1;
+        uint256 reservesBeforeDeposit = vault.reserves(address(yvToken));
+
+        vault.deposit(amount, user);
+        
+        uint256 reservesAfterDeposit = vault.reserves(address(yvToken));
+        uint256 baseTokenBefore = _token.balanceOf(user);
+
+        uint256 shares = vault.balanceOf(user);
+        vault.redeem(vault.balanceOf(user), user, maxLoss);
+        uint256 reservesAfterWithdraw = vault.reserves(address(yvToken));
+        uint256 baseTokenAfter = _token.balanceOf(user);
+        uint256 withdrawFee = shares * 3 / 10_000; // withdrawFeeBPS = 0.03% BPS 100%
+
+        assertEq(withdrawFee, reservesAfterWithdraw - reservesAfterDeposit);
+        require((baseTokenAfter - baseTokenBefore) <= amount, "Received token exceed amount in");
+
+        console.log("Reserves before deposit:", reservesBeforeDeposit);
+        console.log("Reserves after deposit:", reservesAfterDeposit);
+        console.log("Reserves after withdraw:", vault.reserves(address(yvToken)));
+        console.log("Withdraw fee:", withdrawFee); 
         console.log("Received amount:", baseTokenAfter - baseTokenBefore);
         console.log("Balance of baseToken before:", baseTokenBefore);
         console.log("Balance of baseToken after:", baseTokenAfter);
     }
 
     function testRedeemExceedingShares() public {
-        uint256 shares = vault.checkSharesForAddress(user);
+        uint256 shares = vault.reserves(user);
         uint256 maxLoss = 1;
         uint256 amount = 10_000;
         vault.deposit(amount, user);
@@ -209,38 +226,29 @@ contract YVTest is Test {
     function testRedeemZeroMaxLoss() public {
         // NOTE: I'm not sure, since this is a forking network
         // in which allow the redemption with 0 maxLoss is possible. *I guess*
-        // Practically, it should be reverted, due to the price fluctuation.
+        // Practically, it "SHOULD BE REVERTED", due to the price fluctuation.
         console.log("---------- TEST ZERO MAXLOSS REDEEM ----------");
         IERC20 _token = vault.baseToken();
         uint256 maxLoss = 0;
         uint256 amount = 10_000;
-        uint256 reservedBeforeDeposit = vault.getReserves(address(yvToken));
-        
-        vm.expectEmit(true, true, false, true, address(vault));
-        emit Deposit(address(user), address(user), amount);
+        uint256 reservesBeforeDeposit = vault.reserves(address(yvToken));
 
         vault.deposit(amount, user);
         
-        uint256 reservedAfterDeposit = vault.getReserves(address(yvToken));
-        uint256 shares = vault.checkSharesForAddress(user);
+        uint256 reservesAfterDeposit = vault.reserves(address(yvToken));
         uint256 baseTokenBefore = _token.balanceOf(user);
-
-        // NOTE: event has too many params, can't expect the emit ???
-        // vm.expectEmit(true, true, true, true, address(vault));
-        // emit Withdraw(user, user, amount, maxLoss);
-
-        vault.redeem(shares, user, maxLoss);
-        uint256 reservedAfterWithdraw = vault.getReserves(address(yvToken));
+        uint256 shares = vault.balanceOf(user);
+        vault.redeem(vault.balanceOf(user), user, maxLoss);
+        uint256 reservesAfterWithdraw = vault.reserves(address(yvToken));
         uint256 baseTokenAfter = _token.balanceOf(user);
         uint256 withdrawFee = shares * 3 / 10_000; // withdrawFeeBPS = 0.03% BPS 100%
 
-        assertEq(withdrawFee, reservedAfterWithdraw - reservedAfterDeposit);
+        assertEq(withdrawFee, reservesAfterWithdraw - reservesAfterDeposit);
 
-        console.log("Reserves before deposit:", reservedBeforeDeposit);
-        console.log("Reserves after deposit:", reservedAfterDeposit);
-        console.log("Reserves after withdraw:", vault.getReserves(address(yvToken)));
+        console.log("Reserves before deposit:", reservesBeforeDeposit);
+        console.log("Reserves after deposit:", reservesAfterDeposit);
+        console.log("Reserves after withdraw:", vault.reserves(address(yvToken)));
         console.log("Withdraw fee:", withdrawFee);
-        console.log("User's shares in vault:", shares);
         console.log("Received amount:", baseTokenAfter - baseTokenBefore);
         console.log("Balance of baseToken before:", baseTokenBefore);
         console.log("Balance of baseToken after:", baseTokenAfter);
