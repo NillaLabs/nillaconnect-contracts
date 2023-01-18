@@ -20,7 +20,6 @@ contract YearnNillaVault is BaseNillaEarn {
     uint8 private _decimals;
 
     mapping(address => uint256) sharesOfReceiver;
-    uint256 sharesOfNillaVault = 0;
 
     event Deposit(address indexed depositor, address indexed receiver, uint256 amount);
     event Withdraw(address indexed withdrawer, address indexed receiver, uint256 amount, uint256 maxLoss);
