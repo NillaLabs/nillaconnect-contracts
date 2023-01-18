@@ -7,6 +7,8 @@ interface IYVToken is IERC20 {
 
     function token() external view returns (address);
 
+    function pricePerShare() external view returns (uint256);
+
     function deposit(uint256, address) external returns (uint256);
 
     function withdraw(uint256, address, uint256) external returns (uint256);
@@ -21,4 +23,6 @@ interface IYVToken is IERC20 {
     function totalSupply() external view returns (uint256);
 
     function balanceOf(address) external view returns (uint256);
+
+    function emergencyShutdown() external view returns (bool);
 }
