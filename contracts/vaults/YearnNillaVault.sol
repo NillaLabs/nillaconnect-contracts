@@ -19,7 +19,8 @@ contract YearnNillaVault is BaseNillaEarn {
     IERC20 public baseToken;
     uint8 private _decimals;
 
-    mapping(address => uint256) shares;
+    mapping(address => uint256) sharesOfReceiver;
+    uint256 sharesOfNillaVault = 0;
 
     event Deposit(address indexed depositor, address indexed receiver, uint256 amount);
     event Withdraw(address indexed withdrawer, address indexed receiver, uint256 amount, uint256 maxLoss);
@@ -51,15 +52,19 @@ contract YearnNillaVault is BaseNillaEarn {
         IERC20 _baseToken = baseToken;
         IYVToken _yvToken = yvToken;
 
+        uint256 _receivedShares;
+
         // transfer fund.
         uint256 baseTokenBefore = _baseToken.balanceOf(address(this));
         _baseToken.safeTransferFrom(msg.sender, address(this), _amount);
         uint256 receivedBaseToken = _baseToken.balanceOf(address(this)) - baseTokenBefore;
 
-        uint256 yvTokenBefore = _yvToken.balanceOf(address(this));
-        shares[msg.sender] = _yvToken.deposit(receivedBaseToken, _receiver);
+        uint256 yvTokenBefore = _yvToken.balanceOf(address(this)) * yvToken.pricePerShare();
         // deposit to yearn.
-        uint256 receivedYVToken = _yvToken.balanceOf(address(this)) - yvTokenBefore;
+        _receivedShares = _yvToken.deposit(receivedBaseToken, address(this));
+        uint256 receivedYVToken =  (_yvToken.balanceOf(address(this)) * _yvToken.pricePerShare()) - yvTokenBefore;
+        sharesOfReceiver[_receiver] += _receivedShares;
+        
         // collect protocol's fee.
         uint256 depositFee = (receivedYVToken * depositFeeBPS) / BPS;
         reserves[address(_yvToken)] += depositFee;
@@ -94,6 +99,10 @@ contract YearnNillaVault is BaseNillaEarn {
 
     // check total shares the user owns.
     function checkSharesForAddress(address _owner) external view returns(uint256) {
-        return shares[_owner];
+        return sharesOfReceiver[_owner];
+    }
+
+    function getReserves(address _owner) external view returns(uint256) {
+        return reserves[_owner];
     }
 }
