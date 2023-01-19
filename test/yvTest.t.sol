@@ -23,12 +23,12 @@ contract YVTest is Test {
     
     // vault
     YearnNillaVault internal vault;
-    uint256 yvTotalAssets;
-
+    
     uint256 mainnetFork;
 
     IERC20 baseToken; 
     IYVToken internal yvToken = IYVToken(address(0xa258C4606Ca8206D8aA700cE2143D7db854D168c)); //WETH
+    uint256 yvTotalAssets;
 
     event Deposit(address indexed depositor, address indexed receiver, uint256 amount);
     event Withdraw(address indexed withdrawer, address indexed receiver, uint256 amount, uint256 maxLoss);
@@ -55,7 +55,6 @@ contract YVTest is Test {
 
         baseToken = IERC20(address(vault.baseToken()));
         deal(address(baseToken), user, 1e18);
-        deal(address(baseToken), address(vault), 1e18);
         baseToken.safeApprove(address(vault), type(uint256).max);
 
         _checkInfo();
@@ -86,6 +85,7 @@ contract YVTest is Test {
         uint256 depositFee = (balanceInYearnAfter - balanceInYearnBefore) * 3 / 10_000;  //depositFeeBPS = 0.03%, BPS = 100%
 
         assertEq(reservesAfterDeposit - reservesBeforeDeposit, depositFee);
+        assertEq(vault.balanceOf(user), balanceInYearnAfter - depositFee);
 
         console.log("Vault balance in yearn before:", balanceInYearnBefore);
         console.log("Vault balance in yearn after:", balanceInYearnAfter);
@@ -101,7 +101,7 @@ contract YVTest is Test {
     }
 
     function testDepositOneAmount() public {
-        uint256 amount = 1;  //when deposit amount = 1; Reverted("Log != expected log")
+        uint256 amount = 1; // got rounded to `0`
 
         vm.expectRevert();
         vault.deposit(amount, user);
@@ -123,7 +123,9 @@ contract YVTest is Test {
         uint256 balanceInYearnAfter = yvToken.balanceOf(address(vault));
         uint256 reservesAfterDeposit = vault.reserves(address(yvToken));
         uint256 depositFee = (balanceInYearnAfter - balanceInYearnBefore) * 3 / 10_000;  //depositFeeBPS = 0.03%, BPS = 100%
+
         assertEq(reservesAfterDeposit - reservesBeforeDeposit, depositFee);
+        assertEq(vault.balanceOf(user), balanceInYearnAfter - depositFee);
 
         console.log("Vault balance in yearn before:", balanceInYearnBefore);
         console.log("Vault balance in yearn after:", balanceInYearnAfter);
@@ -224,9 +226,6 @@ contract YVTest is Test {
     }
 
     function testRedeemZeroMaxLoss() public {
-        // NOTE: I'm not sure, since this is a forking network
-        // in which allow the redemption with 0 maxLoss is possible. *I guess*
-        // Practically, it "SHOULD BE REVERTED", due to the price fluctuation.
         console.log("---------- TEST ZERO MAXLOSS REDEEM ----------");
         IERC20 _token = vault.baseToken();
         uint256 maxLoss = 0;
