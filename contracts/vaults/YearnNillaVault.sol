@@ -7,9 +7,6 @@ import "OpenZeppelin/openzeppelin-contracts@4.7.3/contracts/token/ERC20/utils/Sa
 import "../BaseNillaEarn.sol";
 import "../../interfaces/IYVToken.sol";
 
-// NOTE: not sure that yearn have liquidy mining process or not?
-// if yes how to get it and implement auto-compound
-
 contract YearnNillaVault is BaseNillaEarn {
     using SafeERC20 for IERC20;
 
@@ -41,7 +38,6 @@ contract YearnNillaVault is BaseNillaEarn {
         return _decimals;
     }
 
-    // NOTE: might add more param to match with yvToken's interface
     function deposit(uint256 _amount, address _receiver) external nonReentrant {
         //gas saving
         IERC20 _baseToken = baseToken;
@@ -64,7 +60,6 @@ contract YearnNillaVault is BaseNillaEarn {
         emit Deposit(msg.sender, _receiver, _amount);
     }
 
-    // NOTE: might add more param to match with yvToken's interface
     function redeem(uint256 _shares, address _receiver, uint256 _maxLoss) external nonReentrant {
         // gas saving
         IERC20 _baseToken = baseToken;
@@ -76,7 +71,7 @@ contract YearnNillaVault is BaseNillaEarn {
         uint256 baseTokenBefore = _baseToken.balanceOf(address(this));
         uint256 withdrawFee = (_shares * withdrawFeeBPS) / BPS;
         reserves[address(_yvToken)] += withdrawFee;
-        _yvToken.withdraw(_shares - withdrawFee, _receiver, _maxLoss); // it could return amount the user received from shares
+        _yvToken.withdraw(_shares - withdrawFee,  msg.sender == executor ? address(this) : _receiver, _maxLoss); // it could return amount the user received from shares
         // withdraw user's fund.
         uint256 receivedBaseToken = _baseToken.balanceOf(address(this)) - baseTokenBefore;
         // bridge token back if cross chain tx.
@@ -90,9 +85,5 @@ contract YearnNillaVault is BaseNillaEarn {
             // NOTE: if not need, del _maxLoss later
             emit Withdraw(msg.sender, _receiver, receivedBaseToken, _maxLoss);
         }
-    }
-
-    function getReserves(address _owner) external view returns(uint256) {
-        return reserves[_owner];
     }
 }
