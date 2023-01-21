@@ -81,7 +81,6 @@ contract YearnNillaVault is BaseNillaEarn {
             emit Withdraw(msg.sender, bridge, receivedBaseToken, _maxLoss);
         }
         else { 
-            _baseToken.safeTransfer(_receiver, receivedBaseToken);
             // NOTE: if not need, del _maxLoss later
             emit Withdraw(msg.sender, _receiver, receivedBaseToken, _maxLoss);
         }
