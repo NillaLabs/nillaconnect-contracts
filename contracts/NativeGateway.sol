@@ -8,7 +8,7 @@ import "../interfaces/IWNative.sol";
 
 contract NativeGateway {
     using SafeERC20 for IERC20;
-    IWNative wNative;
+    IWNative immutable wNative;
 
     constructor(IWNative _wNative) {
         wNative = _wNative;
