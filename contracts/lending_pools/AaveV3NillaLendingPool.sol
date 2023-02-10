@@ -11,7 +11,7 @@ import "../BaseNillaEarn.sol";
 import "../../interfaces/IATokenV3.sol";
 import "../../interfaces/IAaveV3LendingPool.sol";
 
-contract AaveV2NillaLendingPool is BaseNillaEarn {
+contract AaveV3NillaLendingPool is BaseNillaEarn {
     using SafeERC20 for IERC20;
     using Math for uint256;
 
@@ -58,7 +58,7 @@ contract AaveV2NillaLendingPool is BaseNillaEarn {
         uint256 receivedBaseToken = _baseToken.balanceOf(address(this)) - baseTokenBefore;
         // supply to Aave V3, using share instead.
         uint256 aTokenShareBefore = _aToken.scaledBalanceOf(address(this));
-        lendingPool.supply(address(_baseToken), _amount, address(this), 0);
+        lendingPool.supply(address(_baseToken), receivedBaseToken, address(this), 0);
         uint256 receivedAToken = _aToken.scaledBalanceOf(address(this)) - aTokenShareBefore;
         // collect protocol's fee.
         uint256 depositFee = receivedAToken.mulDiv(depositFeeBPS, BPS);
