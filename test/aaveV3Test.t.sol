@@ -10,7 +10,7 @@ import "../contracts/lending_pools/AaveV3NillaLendingPool.sol";
 
 import "../interfaces/IATokenV3.sol";
 
-contract YVTest is Test {
+contract AaveV3Test is Test {
     using SafeERC20 for IERC20;
     
     TransparentUpgradeableProxyImpl public proxy;
@@ -89,13 +89,16 @@ contract YVTest is Test {
         uint256 amount = 1e18;
 
         uint256 aTokenBefore = aToken.scaledBalanceOf(address(aaveV3Pool));
-        aaveV3Pool.deposit(amount, user);
-        uint256 receivedAToken = aToken.scaledBalanceOf(address(aaveV3Pool)) - aTokenBefore;
-        uint256 depositFee = (aTokenAfter - aTokenBefore) * 1 / 10_000;
-        uint256 shares = receivedAToken - depositFee;
-        vm.roll(block.timestamp + 10);
 
+        aaveV3Pool.deposit(amount, user);
+
+        uint256 receivedAToken = aToken.scaledBalanceOf(address(aaveV3Pool)) - aTokenBefore;
+        uint256 depositFee = (receivedAToken - aTokenBefore) * 1 / 10_000;
+        uint256 shares = receivedAToken - depositFee;
+
+        vm.roll(block.timestamp + 10);
         aaveV3Pool.redeem(shares, user);
+
         console.log("WAVAX Balance:", IERC20(WAVAX).balanceOf(user));
     }
 }
