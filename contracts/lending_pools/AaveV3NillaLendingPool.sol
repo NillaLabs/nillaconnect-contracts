@@ -93,7 +93,7 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
             ), // aToken amount rounding down
             msg.sender == executor ? address(this) : _receiver
         );
-        uint256 burnedATokenShare = _aToken.scaledBalanceOf(address(this)) - aTokenShareBefore;
+        uint256 burnedATokenShare = aTokenShareBefore - _aToken.scaledBalanceOf(address(this));
         // dust after burn rounding.
         uint256 dust = shareAfterFee - burnedATokenShare;
         reserves[address(aToken)] += (withdrawFee + dust);
