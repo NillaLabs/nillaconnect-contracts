@@ -20,10 +20,12 @@ contract YVTest is Test {
 
     address public executor = 0x70997970C51812dc3A010C7d01b50e0d17dc79C8;
 
+    address public WAVAX = 0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7;
+
     // zero-address
     address public ZERO_ADDRESS = address(0);
 
-    uint256 public mainnetFork;
+    uint256 public avalancheFork;
 
     IERC20 public baseToken;
     IATokenV3 public aToken = IATokenV3(0x7EfFD7b47Bfd17e52fB7559d3f924201b9DbfF3d);
@@ -32,8 +34,8 @@ contract YVTest is Test {
     AaveV3NillaLendingPool public aaveV3Pool;
 
     function setUp() public {
-        mainnetFork = vm.createFork("https://mainnet.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161"); // ETH Mainnet
-        vm.selectFork(mainnetFork);
+        avalancheFork = vm.createFork("https://avalanche-evm.publicnode.com"); // Avalanche
+        vm.selectFork(avalancheFork);
         startHoax(user);
 
         admin = address(new ProxyAdminImpl());
@@ -80,5 +82,20 @@ contract YVTest is Test {
         console.log("LP balance in aave after:", aTokenAfter);
         console.log("Reserves before:", reserveBefore);
         console.log("Reserves after:", reserveAfter);
+    }
+
+    function testRedeem() public {
+        console.log("---------- TEST NORMAL REDEEM ----------");
+        uint256 amount = 1e18;
+
+        uint256 aTokenBefore = aToken.scaledBalanceOf(address(aaveV3Pool));
+        aaveV3Pool.deposit(amount, user);
+        uint256 receivedAToken = aToken.scaledBalanceOf(address(aaveV3Pool)) - aTokenBefore;
+        uint256 depositFee = (aTokenAfter - aTokenBefore) * 1 / 10_000;
+        uint256 shares = receivedAToken - depositFee;
+        vm.roll(block.timestamp + 10);
+
+        aaveV3Pool.redeem(shares, user);
+        console.log("WAVAX Balance:", IERC20(WAVAX).balanceOf(user));
     }
 }
