@@ -22,7 +22,7 @@ contract YearnNillaVault is BaseNillaEarn {
 
     event Deposit(address indexed depositor, address indexed receiver, uint256 amount);
     event Withdraw(address indexed withdrawer, address indexed receiver, uint256 amount, uint256 maxLoss);
-    event SetPartnerAddress(address newAddress);
+    event SetNewPartnerAddress(address newAddress);
 
     function initialize(
         address _yvToken,
@@ -53,7 +53,7 @@ contract YearnNillaVault is BaseNillaEarn {
     function SetPartnerAddress(address _newAddress) external onlyOwner {
         require(_newAddress != address(0), "Set to empty address");
         PARTNER_ADDRESS = _newAddress;
-        emit SetPartnerAddress(_newAddress);
+        emit SetNewPartnerAddress(_newAddress);
     }
 
     function deposit(uint256 _amount, address _receiver) external nonReentrant {
