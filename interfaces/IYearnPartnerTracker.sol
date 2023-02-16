@@ -5,7 +5,11 @@ interface IYearnPartnerTracker {
         address partner,
         address depositer,
         address vault
-    ) external view returns(uint256);
+    ) external view returns(uint256 refferredBalance);
 
-    function deposit(address vault, address partnerId, uint256 amount) external returns(uint256);
+    function deposit(
+        address vault,
+        address partnerId,
+        uint256 amount
+    ) external returns(uint256 vaultToken);
 }
