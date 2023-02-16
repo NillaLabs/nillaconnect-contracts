@@ -31,6 +31,7 @@ contract IronBankNillaLendingPool is BaseNillaEarn {
         __initialize__(_name, _symbol, _depositFeeBPS, _withdrawFeeBPS, _executor, _bridge);
         cToken = _cToken;
         IERC20 _baseToken = IERC20(_cToken.underlying());
+        baseToken = _baseToken;
         _baseToken.safeApprove(address(_cToken), type(uint256).max);
         _decimals = _cToken.decimals();
     }
