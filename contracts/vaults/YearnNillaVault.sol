@@ -5,12 +5,18 @@ pragma solidity 0.8.17;
 import "OpenZeppelin/openzeppelin-contracts@4.7.3/contracts/token/ERC20/IERC20.sol";
 import "OpenZeppelin/openzeppelin-contracts@4.7.3/contracts/token/ERC20/utils/SafeERC20.sol";
 import "../BaseNillaEarn.sol";
+
 import "../../interfaces/IYVToken.sol";
+import "../../interfaces/IYearnPartnerTracker.sol";
 
 contract YearnNillaVault is BaseNillaEarn {
     using SafeERC20 for IERC20;
 
+    address immutable public NILLA = 0x70997970C51812dc3A010C7d01b50e0d17dc79C8; // MOCK-UP
+
     IYVToken public yvToken;
+    IYearnPartnerTracker public yearnPartnerTracker;
+
     IERC20 public baseToken;
     uint8 private _decimals;
 
@@ -18,7 +24,8 @@ contract YearnNillaVault is BaseNillaEarn {
     event Withdraw(address indexed withdrawer, address indexed receiver, uint256 amount, uint256 maxLoss);
 
     function initialize(
-        IYVToken _yvToken,
+        address _yvToken,
+        address _yearnPartnerTracker,
         string memory _name,
         string memory _symbol,
         uint16 _depositFeeBPS,
@@ -27,10 +34,14 @@ contract YearnNillaVault is BaseNillaEarn {
         address _bridge
     ) external {
         __initialize__(_name, _symbol, _depositFeeBPS, _withdrawFeeBPS, _executor, _bridge);
-        yvToken = _yvToken;
+        yvToken = IYVToken(_yvToken);
+        yearnPartnerTracker = IYearnPartnerTracker(_yearnPartnerTracker);
+
         IERC20 _baseToken = IERC20(address(_yvToken.token()));
         baseToken = _baseToken;
-        baseToken.safeApprove(address(_yvToken), type(uint256).max);
+        _baseToken.safeApprove(address(_yvToken), type(uint256).max);
+        _baseToken.safeApprove(address(_yearnPartnerTracker), type(uint256).max);
+
         _decimals = _yvToken.decimals();
     }
 
@@ -48,10 +59,8 @@ contract YearnNillaVault is BaseNillaEarn {
         _baseToken.safeTransferFrom(msg.sender, address(this), _amount);
         uint256 receivedBaseToken = _baseToken.balanceOf(address(this)) - baseTokenBefore;
 
-        uint256 yvTokenBefore = _yvToken.balanceOf(address(this));
-        // deposit to yearn.
-        _yvToken.deposit(receivedBaseToken, address(this));
-        uint256 receivedYVToken =  _yvToken.balanceOf(address(this)) - yvTokenBefore;
+        // // deposit to yearn.
+        uint256 receivedYVToken = yearnPartnerTracker.deposit(address(_yvToken), NILLA, receivedBaseToken);
 
         // collect protocol's fee.
         uint256 depositFee = (receivedYVToken * depositFeeBPS) / BPS;
