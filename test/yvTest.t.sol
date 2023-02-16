@@ -14,21 +14,22 @@ contract YVTest is Test {
     TransparentUpgradeableProxyImpl internal proxy;
     address internal impl;
     address internal admin;
-    address internal user = address(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266);
+    address internal user = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266;
 
-    address internal executor = address(0x70997970C51812dc3A010C7d01b50e0d17dc79C8);
+    address internal executor = 0x70997970C51812dc3A010C7d01b50e0d17dc79C8;
 
     // zero-address
     address internal ZERO_ADDRESS = address(0);
     
     // vault
     YearnNillaVault internal vault;
-    
-    uint256 mainnetFork;
 
+    IYearnPartnerTracker yearnPartnerTracker = IYearnPartnerTracker(0x8ee392a4787397126C163Cb9844d7c447da419D8); // for mainnet
     IERC20 baseToken; 
-    IYVToken internal yvToken = IYVToken(address(0xa258C4606Ca8206D8aA700cE2143D7db854D168c)); //WETH
+    IYVToken internal yvToken = IYVToken(0xa258C4606Ca8206D8aA700cE2143D7db854D168c); //WETH
     uint256 yvTotalAssets;
+   
+    uint256 mainnetFork;
 
     event Deposit(address indexed depositor, address indexed receiver, uint256 amount);
     event Withdraw(address indexed withdrawer, address indexed receiver, uint256 amount, uint256 maxLoss);
@@ -45,7 +46,16 @@ contract YVTest is Test {
         proxy = new TransparentUpgradeableProxyImpl(
             impl,
             admin,
-            abi.encodeWithSelector(YearnNillaVault.initialize.selector, yvToken, "USDC Vault", "USDC", 3, 3, executor, address(0))
+            abi.encodeWithSelector(
+                YearnNillaVault.initialize.selector,
+                yvToken,
+                yearnPartnerTracker,
+                "USDC Vault",
+                "USDC",
+                3,
+                3,
+                executor,
+                address(0))
         );
 
         vault = YearnNillaVault(address(proxy));
@@ -56,14 +66,18 @@ contract YVTest is Test {
         baseToken = IERC20(address(vault.baseToken()));
         deal(address(baseToken), user, 1e18);
         baseToken.safeApprove(address(vault), type(uint256).max);
-
+        
+        vm.label(address(vault), "### Nilla Vault ###");
+        vm.label(address(yvToken), "### Yearn Vault ###");
+        vm.label(address(yearnPartnerTracker), "### Yearn Partner Tracker ###");
+        vm.label(address(baseToken), "### Yearn Vault ###");
+        vm.label(user, "### User ###");
         _checkInfo();
     }
 
     function _checkInfo() internal view {
         IERC20 _token = IERC20(yvToken.token());
         console.log("---------- CHECKING INFO ----------");
-        console.log("Vault address:", address(vault));
         console.log("Vault balance:", baseToken.balanceOf(address(vault)));
         console.log("Yearn deposit limit:", yvToken.depositLimit());
         console.log("Yearn total assets:", yvToken.totalDebt() + _token.balanceOf(address(yvToken)));
