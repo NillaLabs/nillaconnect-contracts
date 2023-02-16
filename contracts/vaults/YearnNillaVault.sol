@@ -12,7 +12,7 @@ import "../../interfaces/IYearnPartnerTracker.sol";
 contract YearnNillaVault is BaseNillaEarn {
     using SafeERC20 for IERC20;
 
-    address immutable public NILLA = 0x70997970C51812dc3A010C7d01b50e0d17dc79C8; // MOCK-UP
+    address public PARTNER_ADDRESS = 0x70997970C51812dc3A010C7d01b50e0d17dc79C8; // MOCK-UP
 
     IYVToken public yvToken;
     IYearnPartnerTracker public yearnPartnerTracker;
@@ -22,6 +22,7 @@ contract YearnNillaVault is BaseNillaEarn {
 
     event Deposit(address indexed depositor, address indexed receiver, uint256 amount);
     event Withdraw(address indexed withdrawer, address indexed receiver, uint256 amount, uint256 maxLoss);
+    event SetPartnerAddress(address newAddress);
 
     function initialize(
         address _yvToken,
@@ -49,6 +50,12 @@ contract YearnNillaVault is BaseNillaEarn {
         return _decimals;
     }
 
+    function SetPartnerAddress(address _newAddress) external onlyOwner {
+        require(_newAddress != address(0), "Set to empty address");
+        PARTNER_ADDRESS = _newAddress;
+        emit SetPartnerAddress(_newAddress);
+    }
+
     function deposit(uint256 _amount, address _receiver) external nonReentrant {
         //gas saving
         IERC20 _baseToken = baseToken;
@@ -60,7 +67,7 @@ contract YearnNillaVault is BaseNillaEarn {
         uint256 receivedBaseToken = _baseToken.balanceOf(address(this)) - baseTokenBefore;
 
         // // deposit to yearn.
-        uint256 receivedYVToken = yearnPartnerTracker.deposit(address(_yvToken), NILLA, receivedBaseToken);
+        uint256 receivedYVToken = yearnPartnerTracker.deposit(address(_yvToken), PARTNER_ADDRESS, receivedBaseToken);
 
         // collect protocol's fee.
         uint256 depositFee = (receivedYVToken * depositFeeBPS) / BPS;
@@ -77,12 +84,15 @@ contract YearnNillaVault is BaseNillaEarn {
         address msgSender = _msgSender(_receiver);
         // burn user's shares
         _burn(msgSender, _shares);
-        uint256 baseTokenBefore = _baseToken.balanceOf(address(this));
+
         uint256 withdrawFee = (_shares * withdrawFeeBPS) / BPS;
         reserves[address(_yvToken)] += withdrawFee;
-        _yvToken.withdraw(_shares - withdrawFee,  msg.sender == executor ? address(this) : _receiver, _maxLoss); // it could return amount the user received from shares
+
+        uint256 baseTokenBefore = _baseToken.balanceOf(address(this));
         // withdraw user's fund.
+        _yvToken.withdraw(_shares - withdrawFee,  msg.sender == executor ? address(this) : _receiver, _maxLoss);
         uint256 receivedBaseToken = _baseToken.balanceOf(address(this)) - baseTokenBefore;
+        
         // bridge token back if cross chain tx.
         // NOTE: need to fix bridge token condition.
         if (msg.sender == executor) {
