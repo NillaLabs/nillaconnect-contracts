@@ -66,7 +66,7 @@ contract YearnNillaVault is BaseNillaEarn {
         _baseToken.safeTransferFrom(msg.sender, address(this), _amount);
         uint256 receivedBaseToken = _baseToken.balanceOf(address(this)) - baseTokenBefore;
 
-        // // deposit to yearn.
+        // deposit to yearn.
         uint256 receivedYVToken = yearnPartnerTracker.deposit(address(_yvToken), PARTNER_ADDRESS, receivedBaseToken);
 
         // collect protocol's fee.
