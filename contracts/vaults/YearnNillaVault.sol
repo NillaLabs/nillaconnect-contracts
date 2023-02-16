@@ -37,12 +37,12 @@ contract YearnNillaVault is BaseNillaEarn {
         yvToken = IYVToken(_yvToken);
         yearnPartnerTracker = IYearnPartnerTracker(_yearnPartnerTracker);
 
-        IERC20 _baseToken = IERC20(address(_yvToken.token()));
+        IERC20 _baseToken = IERC20(address(IYVToken(_yvToken).token()));
         baseToken = _baseToken;
-        _baseToken.safeApprove(address(_yvToken), type(uint256).max);
-        _baseToken.safeApprove(address(_yearnPartnerTracker), type(uint256).max);
+        _baseToken.safeApprove(_yvToken, type(uint256).max);
+        _baseToken.safeApprove(_yearnPartnerTracker, type(uint256).max);
 
-        _decimals = _yvToken.decimals();
+        _decimals = IYVToken(_yvToken).decimals();
     }
 
     function decimals() public view virtual override returns (uint8) {
