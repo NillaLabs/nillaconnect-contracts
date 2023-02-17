@@ -15,23 +15,31 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
     using SafeERC20 for IERC20;
     using Math for uint256;
 
+    // NOTE: add later for swapping WAVAX
+    // ITraderJoeXYZ swapper;
+
     IATokenV3 public aToken;
     IERC20 public baseToken;
     uint8 private _decimals;
     IAaveV3LendingPool public lendingPool;
 
+    uint16 public harvestFeeBPS;
     uint256 private constant RAY = 1e27;
+    address public constant WAVAX = 0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7;
 
     event Deposit(address indexed depositor, address indexed receiver, uint256 amount);
     event Withdraw(address indexed withdrawer, address indexed receiver, uint256 amount);
+    event Reinvest(address indexed lendingPool, uint256 amount);
 
     function initialize(
         address _lendingPool,
         address _aToken,
+        // address swapper,  NOTE: add later for swapping WAVAX
         string memory _name,
         string memory _symbol,
         uint16 _depositFeeBPS,
         uint16 _withdrawFeeBPS,
+        uint16 _harvestFeeBPS,
         address _executor,
         address _bridge
     ) external {
@@ -42,6 +50,9 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
         baseToken = _baseToken;
         _baseToken.safeApprove(_lendingPool, type(uint256).max);
         _decimals = IATokenV3(_aToken).decimals();
+        // NOTE: add later for swapping WAVAX
+        // swapper = ITraderJoeXYZ(router);
+        harvestFeeBPS = _harvestFeeBPS;
     }
 
     function decimals() public view virtual override returns (uint8) {
@@ -123,7 +134,44 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
         }
     }
 
-    function reinvest() external {
-        
+    // Only available in Avalanche chain.
+    function reinvest(uint256 _slippage, bytes memory _path, uint256 _deadline) external {
+        require(msg.sender == worker, "only worker is allowed");
+        // gas saving:-
+
+        // 1. withdraw rewards from pool
+        uint256 WAVAXBefore = IERC20(WAVAX).balanceOf(address(this));
+        // NOTE: TO DO- Perform withdraw WAVAX rewards
+        uint256 receivedWAVAX = IERC20(WAVAX).balanceOf(address(this)) - WAVAXBefore;
+
+        // 1.5 Calculate worker's fee before swapping
+        {
+            uint256 workerFee = receivedWAVAX * harvestFeeBPS / BPS;
+            (bool _success, ) = payable(worker).call{value: workerFee}("");
+            require(_success, "Failed to send Ethers to worker");
+        }
+
+        // 2. swap WAVAX -> baseToken
+        IERC20[] memory path = new IERC20[](2);
+        path[0] = IERC20(WAVAX);
+        path[1] = baseToken;
+        uint256[] memory pairBinSteps = new uint256[](1);
+        pairBinSteps[0] = 1;    
+
+        /**
+        (uint256 amountOut, ) = router.getSwapOut(path, receivedWAVAX, true);
+        uint256 amountOutWithSlippage = amountOut * _slippage / 100; // `_slippage`%
+        uint256 receivedBase = swapper.swapExactTokensForTokens(receivedWAVAX, amountOutWithSlippage, pairBinSteps, path, receiverAddress, block.timestamp);
+        */
+
+        // 3. re-supply into LP.
+        uint256 aTokenBefore = aToken.scaledBalanceOf(address(this));
+        // lendingPool.supply(address(baseToken), receivedBase, address(this), 0);
+        uint256 receivedAToken = aToken.scaledBalanceOf(address(this)) - aTokenBefore;
+
+        // 4. calculate protocol reward.
+        // reserves[address(_pool)] += protocolReward;
+         
+        // emit Reinvest(address(lendingPool), receivedBase);
     }
 }
