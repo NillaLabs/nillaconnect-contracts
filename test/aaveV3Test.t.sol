@@ -9,6 +9,7 @@ import "../contracts/TransparentUpgradeableProxyImpl.sol";
 import "../contracts/lending_pools/AaveV3NillaLendingPool.sol";
 
 import "../interfaces/IATokenV3.sol";
+import "../interfaces/IWrappedTokenGatewayV3.sol";
 
 contract AaveV3Test is Test {
     using SafeERC20 for IERC20;
@@ -31,6 +32,7 @@ contract AaveV3Test is Test {
     IERC20 public baseToken;
     IATokenV3 public aToken = IATokenV3(0x625E7708f30cA75bfd92586e17077590C60eb4cD);
     IAaveV3LendingPool public pool = IAaveV3LendingPool(0x794a61358D6845594F94dc1DB02A252b5b4814aD);
+    IWrappedTokenGatewayV3 public gateway = IWrappedTokenGatewayV3(0x6F143FE2F7B02424ad3CaD1593D6f36c0Aab69d7);
 
     AaveV3NillaLendingPool public aaveV3Pool;
 
@@ -38,6 +40,12 @@ contract AaveV3Test is Test {
         avalancheFork = vm.createFork("https://avalanche-mainnet.infura.io/v3/e6282a54498e433a87766276d1d4b67b"); // Avalanche
         vm.selectFork(avalancheFork);
         startHoax(user);
+
+        vm.label(user, "#### User ####");
+        vm.label(address(pool), "#### Aave Pool ####");
+        vm.label(address(aToken), "#### AToken ####");
+        vm.label(address(gateway), "#### Gateway ####");
+        vm.label(WAVAX, "#### WAVAX ####");
 
         admin = address(new ProxyAdminImpl());
         impl  = address(new AaveV3NillaLendingPool());
@@ -49,11 +57,13 @@ contract AaveV3Test is Test {
                 AaveV3NillaLendingPool.initialize.selector,
                 address(pool),
                 address(aToken),
+                address(gateway),
                 WAVAX,
                 "USDC Vault",
                 "USDC",
-                1,
-                1,
+                1,    // Deposit Fee BPS
+                1,    // Withdraw Fee BPS  
+                1,    // Harvest Fee BPS
                 executor,
                 address(0))
         );
@@ -63,12 +73,8 @@ contract AaveV3Test is Test {
 
         baseToken.safeApprove(address(aaveV3Pool), type(uint256).max);
 
-        vm.label(user, "#### User ####");
         vm.label(address(aaveV3Pool), "#### Nilla ####");
         vm.label(address(baseToken), "#### BaseToken ####");
-        vm.label(address(pool), "#### Aave Pool ####");
-        vm.label(address(aToken), "#### AToken ####");
-        vm.label(WAVAX, "#### WAVAX ####");
     }
 
     function testDepositNormal() public {
