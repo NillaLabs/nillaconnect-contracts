@@ -49,6 +49,7 @@ contract AaveV3Test is Test {
                 AaveV3NillaLendingPool.initialize.selector,
                 address(pool),
                 address(aToken),
+                WAVAX,
                 "USDC Vault",
                 "USDC",
                 1,
