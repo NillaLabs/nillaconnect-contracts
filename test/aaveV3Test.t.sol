@@ -70,7 +70,7 @@ contract AaveV3Test is Test {
         vm.label(WAVAX, "#### WAVAX ####");
     }
 
-    function testDeposit() public {
+    function testDepositNormal() public {
         console.log("---------- TEST NORMAL DEPOSIT ----------");
         uint256 amount = 1e15;
         deal(address(baseToken), user, amount);
@@ -132,7 +132,7 @@ contract AaveV3Test is Test {
         aaveV3Pool.deposit(amount, address(0));
     }
 
-    function testRedeem() public {
+    function testRedeemNormal() public {
         console.log("---------- TEST NORMAL REDEEM ----------");
         uint256 amount = 1e15;
         deal(address(baseToken), user, amount);
@@ -147,7 +147,9 @@ contract AaveV3Test is Test {
         uint256 withdrawFee = shares.mulDiv(1, 10_000);
         uint256 reserveBefore = aaveV3Pool.reserves(address(aToken));
         
+        console.log("Block timestamp:", block.timestamp);
         vm.warp(block.timestamp + 1_000_000_000);
+        console.log("Block timestamp 2:", block.timestamp);
         aaveV3Pool.redeem(shares, user);
 
         uint256 addedReserve = aaveV3Pool.reserves(address(aToken)) - reserveBefore;
@@ -165,6 +167,8 @@ contract AaveV3Test is Test {
         console.log("LP balance in aave after redeem:", aTokenAfterRedeem);
         console.log("Base Token Before deposit:", baseTokenBefore);
         console.log("Base Token After withdraw:", baseTokenAfter);
+        console.log("USER WAVAX:", IERC20(WAVAX).balanceOf(user));
+        console.log("NILLA WAVAX:", IERC20(WAVAX).balanceOf(address(aaveV3Pool)));
     }
 
     function testFuzzyRedeem(uint256 amount) public {

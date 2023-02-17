@@ -122,4 +122,8 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
             emit WithdrawReserve(msg.sender, _token, transferedATokenShare);
         }
     }
+
+    function reinvest() external {
+        
+    }
 }
