@@ -33,7 +33,6 @@ contract AaveV3NillaBase is BaseNillaEarn {
 
     uint16 public harvestFeeBPS;
     uint256 internal constant RAY = 1e27;
-    address public constant WAVAX = 0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7;
 
     event Deposit(address indexed depositor, address indexed receiver, uint256 amount);
     event Withdraw(address indexed withdrawer, address indexed receiver, uint256 amount);

@@ -102,7 +102,7 @@ contract AaveV3NillaLendingPoolETH is AaveV3NillaBase {
         (bool _success, ) = payable(worker).call{value: workerFee}("");
         require(_success, "Failed to send Ethers to worker");
         uint256 receivedNative = address(this).balance - workerFee;
-        // re-supply into LP.
+        // re-supply into pool.
         {
             uint256 aTokenBefore = _aToken.scaledBalanceOf(address(this));
             gateway.depositETH{value: receivedNative}(address(lendingPool), address(this), 0);
