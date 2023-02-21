@@ -12,6 +12,8 @@ import "../../interfaces/IWNative.sol";
 import "../../interfaces/IATokenV3.sol";
 import "../../interfaces/IAaveV3LendingPool.sol";
 import "../../interfaces/IWrappedTokenGatewayV3.sol";
+import "../../interfaces/IRewardsController.sol";
+import "../../interfaces/ILBRouter.sol";
 
 contract AaveV3NillaBase is BaseNillaEarn {
     using SafeERC20 for IERC20;
@@ -20,13 +22,14 @@ contract AaveV3NillaBase is BaseNillaEarn {
     IWNative public WETH;
 
     // NOTE: add later for swapping WAVAX
-    // ITraderJoeXYZ swapper;
+    ILBRouter swapRouter;
 
     IATokenV3 public aToken;
     IERC20 public baseToken;
     uint8 internal _decimals;
     IAaveV3LendingPool public lendingPool;
     IWrappedTokenGatewayV3 public gateway;
+    IRewardsController public rewardsController;
 
     uint16 public harvestFeeBPS;
     uint256 internal constant RAY = 1e27;
@@ -35,13 +38,17 @@ contract AaveV3NillaBase is BaseNillaEarn {
     event Deposit(address indexed depositor, address indexed receiver, uint256 amount);
     event Withdraw(address indexed withdrawer, address indexed receiver, uint256 amount);
     event Reinvest(address indexed lendingPool, uint256 amount);
+    event Swap(uint16 _amountOutWithSlippage, uint256[] _pairBinSteps, IERC20[] _tokenPath, uint256 _deadline);
+
+    uint256 public totalAssets;
 
     function _initialize(
         address _lendingPool,
         address _aToken,
         address _gateway,
         address _weth,
-        // address swapper,  NOTE: add later for swapping WAVAX
+        address _rewardsController,
+        address _swapRouter,
         string memory _name,
         string memory _symbol,
         uint16 _depositFeeBPS,
@@ -54,13 +61,14 @@ contract AaveV3NillaBase is BaseNillaEarn {
         lendingPool = IAaveV3LendingPool(_lendingPool);
         aToken = IATokenV3(_aToken);
         gateway = IWrappedTokenGatewayV3(_gateway);
+        rewardsController = IRewardsController(_rewardsController);
+        swapRouter = ILBRouter(_swapRouter);
         WETH = IWNative(_weth);
         IERC20 _baseToken = IERC20(IATokenV3(_aToken).UNDERLYING_ASSET_ADDRESS());
         baseToken = _baseToken;
         _baseToken.safeApprove(_lendingPool, type(uint256).max);
+        _baseToken.safeApprove(_swapRouter, type(uint256).max);
         _decimals = IATokenV3(_aToken).decimals();
-        // NOTE: add later for swapping WAVAX
-        // swapper = ITraderJoeXYZ(router);
         harvestFeeBPS = _harvestFeeBPS;
     }
 
@@ -83,37 +91,5 @@ contract AaveV3NillaBase is BaseNillaEarn {
             reserves[_token] -= transferedATokenShare;
             emit WithdrawReserve(msg.sender, _token, transferedATokenShare);
         }
-    }
-
-    // Only available in Avalanche chain.
-    function reinvest(uint256 _slippage, address[] memory _path) external {
-        require(msg.sender == worker, "only worker is allowed");
-        // gas saving:-
-
-        // 1. withdraw rewards from pool
-        uint256 WAVAXBefore = IERC20(WAVAX).balanceOf(address(this));
-        // NOTE: TO DO- Perform withdraw WAVAX rewards
-        uint256 receivedWAVAX = IERC20(WAVAX).balanceOf(address(this)) - WAVAXBefore;
-
-        // 1.2 Calculate worker's fee before swapping
-        {
-            uint256 workerFee = receivedWAVAX * harvestFeeBPS / BPS;
-            WETH.withdraw(workerFee);
-            (bool _success, ) = payable(worker).call{value: workerFee}("");
-            require(_success, "Failed to send Ethers to worker");
-        }
-
-        // 2. swap WAVAX -> baseToken
-        // uint256 receivedBase = swapper.swapExactTokensForTokens(receivedWAVAX, amountOutWithSlippage, pairBinSteps, path, receiverAddress, block.timestamp);
-
-        // 3. re-supply into LP.
-        uint256 aTokenBefore = aToken.scaledBalanceOf(address(this));
-        // lendingPool.supply(address(baseToken), receivedBase, address(this), 0);
-        uint256 receivedAToken = aToken.scaledBalanceOf(address(this)) - aTokenBefore;
-
-        // 4. calculate protocol reward.
-        // reserves[address(_pool)] += protocolReward;
-         
-        // emit Reinvest(address(lendingPool), receivedBase);
     }
 }
