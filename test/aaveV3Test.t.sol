@@ -12,6 +12,7 @@ import "../interfaces/IATokenV3.sol";
 import "../interfaces/IWrappedTokenGatewayV3.sol";
 import "../interfaces/IRewardsController.sol";
 import "../interfaces/IJoeRouter.sol";
+import "../interfaces/IWNative.sol";
 
 contract AaveV3Test is Test {
     using SafeERC20 for IERC20;
@@ -20,11 +21,12 @@ contract AaveV3Test is Test {
     TransparentUpgradeableProxyImpl public proxy;
     address public impl;
     address public admin;
+    address public rewarder = 0xA68eEB34418871d844a1301F97353cB20343B65d; // someone who has rewards on AAVE.
     address public user = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266;
 
     address public executor = 0x70997970C51812dc3A010C7d01b50e0d17dc79C8;
 
-    address public WAVAX = 0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7;
+    address public WETH = 0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7;
 
     // zero-address
     address public ZERO_ADDRESS = address(0);
@@ -49,7 +51,9 @@ contract AaveV3Test is Test {
         vm.label(address(pool), "#### Aave Pool ####");
         vm.label(address(aToken), "#### AToken ####");
         vm.label(address(gateway), "#### Gateway ####");
-        vm.label(WAVAX, "#### WAVAX ####");
+        vm.label(WETH, "#### WETH ####");
+        vm.label(address(rewardsController), "#### Reward Controller ####");
+        vm.label(address(swapRouter), "#### Swap Router ####");
 
         admin = address(new ProxyAdminImpl());
         impl  = address(new AaveV3NillaLendingPool());
@@ -62,9 +66,9 @@ contract AaveV3Test is Test {
                 address(pool),
                 address(aToken),
                 address(gateway),
+                WETH,
                 address(rewardsController),
                 address(swapRouter),
-                WAVAX,
                 "USDC Vault",
                 "USDC",
                 1,    // Deposit Fee BPS
@@ -181,8 +185,8 @@ contract AaveV3Test is Test {
         console.log("LP balance in aave after redeem:", aTokenAfterRedeem);
         console.log("Base Token Before deposit:", baseTokenBefore);
         console.log("Base Token After withdraw:", baseTokenAfter);
-        console.log("USER WAVAX:", IERC20(WAVAX).balanceOf(user));
-        console.log("NILLA WAVAX:", IERC20(WAVAX).balanceOf(address(aaveV3Pool)));
+        console.log("USER WETH:", IERC20(WETH).balanceOf(user));
+        console.log("NILLA WETH:", IERC20(WETH).balanceOf(address(aaveV3Pool)));
     }
 
     function testFuzzyRedeem(uint256 amount) public {
@@ -236,25 +240,26 @@ contract AaveV3Test is Test {
     }
 
     function testReinvest() public {
-         console.log("---------- TEST NORMAL REDEEM ----------");
+        console.log("---------- TEST NORMAL REDEEM ----------");
         uint256 amount = 1e15;
         deal(address(baseToken), user, amount);
 
         uint256 aTokenBefore = aToken.scaledBalanceOf(address(aaveV3Pool));
         aaveV3Pool.deposit(amount, user);
+        uint256 aTokenAfterDeposit = aToken.scaledBalanceOf(address(aaveV3Pool));
 
         vm.stopPrank();
         vm.startPrank(address(aToken));
-        rewardsController.handleAction(address(aaveV3Pool), aToken.totalSupply(), aaveV3Pool.totalAssets());
+        rewardsController.handleAction(address(aaveV3Pool), aToken.totalSupply(), aToken.scaledBalanceOf(address(aaveV3Pool)));
+
+        vm.warp(block.timestamp + 1_000_000_000);
+
+        rewardsController.handleAction(address(aaveV3Pool), aToken.totalSupply(), aToken.scaledBalanceOf(address(aaveV3Pool)));
         vm.stopPrank();
         startHoax(user);
 
-        uint256 aTokenAfterDeposit = aToken.scaledBalanceOf(address(aaveV3Pool));
-
-        vm.warp(block.timestamp + 1_000_000);
-
         address[] memory _path = new address[](2);
-        _path[0] = WAVAX;
+        _path[0] = WETH;
         _path[1] = address(baseToken);
         uint256 _deadline = block.timestamp + 1000;
 
@@ -264,5 +269,18 @@ contract AaveV3Test is Test {
         console.log("LP balance in aave before deposit:", aTokenBefore);
         console.log("LP balance in aave after deposit:", aTokenAfterDeposit);
         console.log("LP balance in aave after redeem:", aTokenAfterReinvest);
+    }
+
+    function testClaim() public {
+        vm.stopPrank();
+        startHoax(rewarder);
+
+        address[] memory assets = new address[](1);
+        assets[0] = address(aToken);
+
+        console.log("Total Rewards:", rewardsController.getUserRewards(assets, rewarder, WETH));
+        console.log("WETH in Nilla Before:", IWNative(WETH).balanceOf(address(aaveV3Pool)));
+        rewardsController.claimRewards(assets, type(uint256).max, address(aaveV3Pool), WETH);
+        console.log("WETH in Nilla After:", IWNative(WETH).balanceOf(address(aaveV3Pool)));
     }
 }
