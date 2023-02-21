@@ -5,7 +5,7 @@ import "OpenZeppelin/openzeppelin-contracts@4.7.3/contracts/token/ERC20/IERC20.s
 import "OpenZeppelin/openzeppelin-contracts@4.7.3/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "../contracts/ProxyAdminImpl.sol";
-import "../contracts/TransparentUpgradeableProxyImpl.sol";
+import "../contracts/TransparentUpgradeableProxyImplNative.sol";
 import "../contracts/lending_pools/AaveV3NillaLendingPool.sol";
 
 import "../interfaces/IATokenV3.sol";
@@ -18,7 +18,7 @@ contract AaveV3Test is Test {
     using SafeERC20 for IERC20;
     using Math for uint256;
     
-    TransparentUpgradeableProxyImpl public proxy;
+    TransparentUpgradeableProxyImplNative public proxy;
     address public impl;
     address public admin;
     address public rewarder = 0xA68eEB34418871d844a1301F97353cB20343B65d; // someone who has rewards on AAVE.
@@ -37,7 +37,7 @@ contract AaveV3Test is Test {
     IATokenV3 public aToken = IATokenV3(0x625E7708f30cA75bfd92586e17077590C60eb4cD);
     IAaveV3LendingPool public pool = IAaveV3LendingPool(0x794a61358D6845594F94dc1DB02A252b5b4814aD);
     IWrappedTokenGatewayV3 public gateway = IWrappedTokenGatewayV3(0x6F143FE2F7B02424ad3CaD1593D6f36c0Aab69d7);
-    IRewardsController rewardsController = IRewardsController(0x5f4d15d761528c57a5C30c43c1DAb26Fc5452731);
+    IRewardsController rewardsController = IRewardsController(0x929EC64c34a17401F460460D4B9390518E5B473e);
     IJoeRouter swapRouter = IJoeRouter(0x60aE616a2155Ee3d9A68541Ba4544862310933d4);
 
     AaveV3NillaLendingPool public aaveV3Pool;
@@ -58,7 +58,7 @@ contract AaveV3Test is Test {
         admin = address(new ProxyAdminImpl());
         impl  = address(new AaveV3NillaLendingPool());
 
-        proxy = new TransparentUpgradeableProxyImpl(
+        proxy = new TransparentUpgradeableProxyImplNative(
             impl,
             admin,
             abi.encodeWithSelector(
@@ -75,10 +75,10 @@ contract AaveV3Test is Test {
                 1,    // Withdraw Fee BPS  
                 1,    // Harvest Fee BPS
                 executor,
-                address(0))
+                address(0)),
+            WETH
         );
-
-        aaveV3Pool = AaveV3NillaLendingPool(address(proxy));
+        aaveV3Pool = AaveV3NillaLendingPool(payable(address(proxy)));
         aaveV3Pool.setWorker(user);
         baseToken = IERC20(aaveV3Pool.baseToken());
 
@@ -241,7 +241,7 @@ contract AaveV3Test is Test {
 
     function testReinvest() public {
         console.log("---------- TEST NORMAL REDEEM ----------");
-        uint256 amount = 1e15;
+        uint256 amount = 1e9;
         deal(address(baseToken), user, amount);
 
         uint256 aTokenBefore = aToken.scaledBalanceOf(address(aaveV3Pool));
@@ -252,7 +252,7 @@ contract AaveV3Test is Test {
         vm.startPrank(address(aToken));
         rewardsController.handleAction(address(aaveV3Pool), aToken.totalSupply(), aToken.scaledBalanceOf(address(aaveV3Pool)));
 
-        vm.warp(block.timestamp + 1_000_000_000);
+        vm.warp(block.timestamp + 1_000_000);
 
         rewardsController.handleAction(address(aaveV3Pool), aToken.totalSupply(), aToken.scaledBalanceOf(address(aaveV3Pool)));
         vm.stopPrank();
@@ -279,8 +279,8 @@ contract AaveV3Test is Test {
         assets[0] = address(aToken);
 
         console.log("Total Rewards:", rewardsController.getUserRewards(assets, rewarder, WETH));
-        console.log("WETH in Nilla Before:", IWNative(WETH).balanceOf(address(aaveV3Pool)));
-        rewardsController.claimRewards(assets, type(uint256).max, address(aaveV3Pool), WETH);
-        console.log("WETH in Nilla After:", IWNative(WETH).balanceOf(address(aaveV3Pool)));
+        console.log("WETH in Nilla Before:", IWNative(WETH).balanceOf(rewarder));
+        rewardsController.claimRewards(assets, type(uint256).max, rewarder, WETH);
+        console.log("WETH in Nilla After:", IWNative(WETH).balanceOf(rewarder));
     }
 }
