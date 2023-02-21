@@ -10,6 +10,8 @@ import "../contracts/lending_pools/AaveV3NillaLendingPool.sol";
 
 import "../interfaces/IATokenV3.sol";
 import "../interfaces/IWrappedTokenGatewayV3.sol";
+import "../interfaces/IRewardsController.sol";
+import "../interfaces/IJoeRouter.sol";
 
 contract AaveV3Test is Test {
     using SafeERC20 for IERC20;
@@ -33,6 +35,8 @@ contract AaveV3Test is Test {
     IATokenV3 public aToken = IATokenV3(0x625E7708f30cA75bfd92586e17077590C60eb4cD);
     IAaveV3LendingPool public pool = IAaveV3LendingPool(0x794a61358D6845594F94dc1DB02A252b5b4814aD);
     IWrappedTokenGatewayV3 public gateway = IWrappedTokenGatewayV3(0x6F143FE2F7B02424ad3CaD1593D6f36c0Aab69d7);
+    IRewardsController rewardsController = IRewardsController(0x5f4d15d761528c57a5C30c43c1DAb26Fc5452731);
+    IJoeRouter swapRouter = IJoeRouter(0x60aE616a2155Ee3d9A68541Ba4544862310933d4);
 
     AaveV3NillaLendingPool public aaveV3Pool;
 
@@ -58,6 +62,8 @@ contract AaveV3Test is Test {
                 address(pool),
                 address(aToken),
                 address(gateway),
+                address(rewardsController),
+                address(swapRouter),
                 WAVAX,
                 "USDC Vault",
                 "USDC",
@@ -69,6 +75,7 @@ contract AaveV3Test is Test {
         );
 
         aaveV3Pool = AaveV3NillaLendingPool(address(proxy));
+        aaveV3Pool.setWorker(user);
         baseToken = IERC20(aaveV3Pool.baseToken());
 
         baseToken.safeApprove(address(aaveV3Pool), type(uint256).max);
@@ -226,5 +233,36 @@ contract AaveV3Test is Test {
 
         vm.expectRevert(bytes("ERC20: transfer to the zero address"));
         aaveV3Pool.redeem(10_000, address(0));
+    }
+
+    function testReinvest() public {
+         console.log("---------- TEST NORMAL REDEEM ----------");
+        uint256 amount = 1e15;
+        deal(address(baseToken), user, amount);
+
+        uint256 aTokenBefore = aToken.scaledBalanceOf(address(aaveV3Pool));
+        aaveV3Pool.deposit(amount, user);
+
+        vm.stopPrank();
+        vm.startPrank(address(aToken));
+        rewardsController.handleAction(address(aaveV3Pool), aToken.totalSupply(), aaveV3Pool.totalAssets());
+        vm.stopPrank();
+        startHoax(user);
+
+        uint256 aTokenAfterDeposit = aToken.scaledBalanceOf(address(aaveV3Pool));
+
+        vm.warp(block.timestamp + 1_000_000);
+
+        address[] memory _path = new address[](2);
+        _path[0] = WAVAX;
+        _path[1] = address(baseToken);
+        uint256 _deadline = block.timestamp + 1000;
+
+        aaveV3Pool.reinvest(100, _path, _deadline);
+        uint256 aTokenAfterReinvest = aToken.scaledBalanceOf(address(aaveV3Pool));
+
+        console.log("LP balance in aave before deposit:", aTokenBefore);
+        console.log("LP balance in aave after deposit:", aTokenAfterDeposit);
+        console.log("LP balance in aave after redeem:", aTokenAfterReinvest);
     }
 }
