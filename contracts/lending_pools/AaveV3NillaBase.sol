@@ -13,7 +13,7 @@ import "../../interfaces/IATokenV3.sol";
 import "../../interfaces/IAaveV3LendingPool.sol";
 import "../../interfaces/IWrappedTokenGatewayV3.sol";
 import "../../interfaces/IRewardsController.sol";
-import "../../interfaces/ILBRouter.sol";
+import "../../interfaces/IJoeRouter.sol";
 
 contract AaveV3NillaBase is BaseNillaEarn {
     using SafeERC20 for IERC20;
@@ -22,7 +22,7 @@ contract AaveV3NillaBase is BaseNillaEarn {
     IWNative public WETH;
 
     // NOTE: add later for swapping WAVAX
-    ILBRouter swapRouter;
+    IJoeRouter swapRouter;
 
     IATokenV3 public aToken;
     IERC20 public baseToken;
@@ -38,7 +38,7 @@ contract AaveV3NillaBase is BaseNillaEarn {
     event Deposit(address indexed depositor, address indexed receiver, uint256 amount);
     event Withdraw(address indexed withdrawer, address indexed receiver, uint256 amount);
     event Reinvest(address indexed lendingPool, uint256 amount);
-    event Swap(uint16 _amountOutWithSlippage, uint256[] _pairBinSteps, IERC20[] _tokenPath, uint256 _deadline);
+    event Swap(uint256 _amountIn, uint256 _amountOutWithSlippage, address[] _tokenPath, uint256 _deadline);
 
     uint256 public totalAssets;
 
@@ -62,7 +62,7 @@ contract AaveV3NillaBase is BaseNillaEarn {
         aToken = IATokenV3(_aToken);
         gateway = IWrappedTokenGatewayV3(_gateway);
         rewardsController = IRewardsController(_rewardsController);
-        swapRouter = ILBRouter(_swapRouter);
+        swapRouter = IJoeRouter(_swapRouter);
         WETH = IWNative(_weth);
         IERC20 _baseToken = IERC20(IATokenV3(_aToken).UNDERLYING_ASSET_ADDRESS());
         baseToken = _baseToken;
