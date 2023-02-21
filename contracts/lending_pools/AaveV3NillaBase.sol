@@ -37,7 +37,6 @@ contract AaveV3NillaBase is BaseNillaEarn {
     event Deposit(address indexed depositor, address indexed receiver, uint256 amount);
     event Withdraw(address indexed withdrawer, address indexed receiver, uint256 amount);
     event Reinvest(address indexed lendingPool, uint256 amount);
-    event Swap(uint256 _amountIn, uint256 _amountOutWithSlippage, address[] _tokenPath, uint256 _deadline);
 
     uint256 public totalAssets;
 
@@ -63,10 +62,10 @@ contract AaveV3NillaBase is BaseNillaEarn {
         rewardsController = IRewardsController(_rewardsController);
         swapRouter = IJoeRouter(_swapRouter);
         WETH = IWNative(_weth);
+        IERC20(_weth).safeApprove(_swapRouter, type(uint256).max);
         IERC20 _baseToken = IERC20(IATokenV3(_aToken).UNDERLYING_ASSET_ADDRESS());
         baseToken = _baseToken;
         _baseToken.safeApprove(_lendingPool, type(uint256).max);
-        _baseToken.safeApprove(_swapRouter, type(uint256).max);
         _decimals = IATokenV3(_aToken).decimals();
         harvestFeeBPS = _harvestFeeBPS;
     }
@@ -90,5 +89,24 @@ contract AaveV3NillaBase is BaseNillaEarn {
             reserves[_token] -= transferedATokenShare;
             emit WithdrawReserve(msg.sender, _token, transferedATokenShare);
         }
+    }
+
+    function _reinvest(IATokenV3 _aToken, IWNative _WETH, uint256 _workerFee, uint256 _amount) internal {
+        //gas saving
+        uint256 protocolReserves = reserves[address(_aToken)];
+        
+        _WETH.withdraw(_workerFee);
+        (bool _success, ) = payable(worker).call{value: _workerFee}("");
+        require(_success, "Failed to send Ethers to worker");
+        // re-supply into pool.
+        {
+            uint256 aTokenBefore = _aToken.scaledBalanceOf(address(this));
+            lendingPool.supply(address(baseToken), _amount, address(this), 0);
+            uint256 receivedAToken = _aToken.scaledBalanceOf(address(this)) - aTokenBefore;
+            // calculate protocol reward.
+            uint256 protocolReward = protocolReserves.mulDiv(receivedAToken, (totalAssets + protocolReserves));
+            reserves[address(_aToken)] += protocolReward;
+        }
+        emit Reinvest(address(lendingPool), _amount);
     }
 }
