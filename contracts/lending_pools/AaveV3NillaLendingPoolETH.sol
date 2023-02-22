@@ -16,11 +16,7 @@ contract AaveV3NillaLendingPoolETH is AaveV3NillaBase {
     using Math for uint256;
     
     function initialize(
-        address _lendingPool,
-        address _aToken,
-        address _gateway,
-        address _weth,
-        address _rewardsController,
+        AaveObj memory _aave,
         address _swapRouter,
         string memory _name,
         string memory _symbol,
@@ -30,7 +26,7 @@ contract AaveV3NillaLendingPoolETH is AaveV3NillaBase {
         address _executor,
         address _bridge
     ) external {
-        _initialize(_lendingPool, _aToken, _gateway, _weth, _rewardsController, _swapRouter, _name, _symbol, _depositFeeBPS, _withdrawFeeBPS, _harvestFeeBPS, _executor, _bridge);
+        _initialize(_aave, _swapRouter, _name, _symbol, _depositFeeBPS, _withdrawFeeBPS, _harvestFeeBPS, _executor, _bridge);
     }
     
     function deposit(address _receiver) external payable nonReentrant {
@@ -44,7 +40,6 @@ contract AaveV3NillaLendingPoolETH is AaveV3NillaBase {
         // collect protocol's fee
         uint256 depositFee = receivedAToken.mulDiv(depositFeeBPS, BPS);
         reserves[address(_aToken)] += depositFee;
-        totalAssets += (receivedAToken - depositFee);
         _mint(_receiver, receivedAToken - depositFee);
         emit Deposit(msg.sender, _receiver, msg.value);
     }
@@ -54,10 +49,12 @@ contract AaveV3NillaLendingPoolETH is AaveV3NillaBase {
         address _baseToken = address(baseToken);
         IATokenV3 _aToken = aToken;
         IAaveV3LendingPool _lendingPool = lendingPool;
-        // set msgSender for cross chain tx
-        address msgSender = _msgSender(_receiver);
-        // burn user's shares
-        _burn(msgSender, _shares);
+        {
+            // set msgSender for cross chain tx
+            address msgSender = _msgSender(_receiver);
+            // burn user's shares
+            _burn(msgSender, _shares);
+        }
         // collect protocol's fee
         uint256 withdrawFee = _shares.mulDiv(withdrawFeeBPS, BPS);
         uint256 shareAfterFee = _shares - withdrawFee;
@@ -71,13 +68,15 @@ contract AaveV3NillaLendingPoolETH is AaveV3NillaBase {
                 RAY,
                 Math.Rounding.Down
             ),
-            address(this));
-        uint256 burnedATokenShare = aTokenShareBefore - _aToken.scaledBalanceOf(address(this));
+            address(this)
+        );
         uint256 receivedNativeToken = address(this).balance - nativeTokenBefore;
-        // dust after burn rounding
-        uint256 dust = shareAfterFee - burnedATokenShare;
-        reserves[address(aToken)] += (withdrawFee + dust);
-        totalAssets -= receivedNativeToken;
+        {
+            uint256 burnedATokenShare = aTokenShareBefore - _aToken.scaledBalanceOf(address(this));
+            // dust after burn rounding
+            uint256 dust = shareAfterFee - burnedATokenShare;
+            reserves[address(aToken)] += (withdrawFee + dust);
+        }
         // bridge token back if cross chain tx
         if (msg.sender == executor) {
             _bridgeTokenBack(_receiver, receivedNativeToken);
