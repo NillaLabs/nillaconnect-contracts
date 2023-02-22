@@ -11,8 +11,6 @@ import "../lending_pools/AaveV3NillaBase.sol";
 import "../../interfaces/IATokenV3.sol";
 import "../../interfaces/IAaveV3LendingPool.sol";
 
-import 'forge-std/console.sol';
-
 contract AaveV3NillaLendingPool is AaveV3NillaBase {
     using SafeERC20 for IERC20;
     using Math for uint256;
@@ -81,12 +79,6 @@ contract AaveV3NillaLendingPool is AaveV3NillaBase {
             // dust after burn rounding.
             uint256 dust = shareAfterFee - burnedATokenShare;
             reserves[address(aToken)] += (withdrawFee + dust);
-            console.log("Balance Nilla:", _aToken.scaledBalanceOf(address(this)).mulDiv(
-                _lendingPool.getReserveNormalizedIncome(_baseToken),
-                RAY,
-                Math.Rounding.Down
-            ));
-            console.log("received:", receivedBaseToken);
         }
         // bridge token back if cross chain tx.
         if (msg.sender == executor) {
