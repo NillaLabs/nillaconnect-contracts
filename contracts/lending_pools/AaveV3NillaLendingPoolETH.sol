@@ -36,7 +36,6 @@ contract AaveV3NillaLendingPoolETH is AaveV3NillaBase {
     function deposit(address _receiver) external payable nonReentrant {
         require(msg.value > 0, "Value is 0");
         // gas saving
-        IWNative _WETH = WETH;
         IATokenV3 _aToken = aToken;
         // supply to Aave V3, using share instead
         uint256 aTokenShareBefore = _aToken.scaledBalanceOf(address(this));
