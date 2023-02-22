@@ -36,7 +36,6 @@ contract AaveV3NillaLendingPoolETH is AaveV3NillaBase {
     function deposit(address _receiver) external payable nonReentrant {
         require(msg.value > 0, "Value is 0");
         // gas saving
-        IWNative _WETH = WETH;
         IATokenV3 _aToken = aToken;
         // supply to Aave V3, using share instead
         uint256 aTokenShareBefore = _aToken.scaledBalanceOf(address(this));
@@ -47,13 +46,14 @@ contract AaveV3NillaLendingPoolETH is AaveV3NillaBase {
         reserves[address(_aToken)] += depositFee;
         totalAssets += (receivedAToken - depositFee);
         _mint(_receiver, receivedAToken - depositFee);
-        emit Deposit(msg.sender, _receiver, _amount);
+        emit Deposit(msg.sender, _receiver, msg.value);
     }
 
     function redeem(uint256 _shares, address _receiver) external nonReentrant {
         // gas saving
         address _baseToken = address(baseToken);
         IATokenV3 _aToken = aToken;
+        IAaveV3LendingPool _lendingPool = lendingPool;
         // set msgSender for cross chain tx
         address msgSender = _msgSender(_receiver);
         // burn user's shares
@@ -64,7 +64,14 @@ contract AaveV3NillaLendingPoolETH is AaveV3NillaBase {
         uint256 nativeTokenBefore = address(this).balance;
         // withdraw user's fund
         uint256 aTokenShareBefore = _aToken.scaledBalanceOf(address(this));
-        gateway.withdrawETH(address(lendingPool), amount, onBehalfOf);
+        gateway.withdrawETH(
+            address(_lendingPool),
+            shareAfterFee.mulDiv(
+                _lendingPool.getReserveNormalizedIncome(_baseToken),
+                RAY,
+                Math.Rounding.Down
+            ),
+            address(this));
         uint256 burnedATokenShare = aTokenShareBefore - _aToken.scaledBalanceOf(address(this));
         uint256 receivedNativeToken = address(this).balance - nativeTokenBefore;
         // dust after burn rounding

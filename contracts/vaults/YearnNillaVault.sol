@@ -5,20 +5,28 @@ pragma solidity 0.8.17;
 import "OpenZeppelin/openzeppelin-contracts@4.7.3/contracts/token/ERC20/IERC20.sol";
 import "OpenZeppelin/openzeppelin-contracts@4.7.3/contracts/token/ERC20/utils/SafeERC20.sol";
 import "../BaseNillaEarn.sol";
+
 import "../../interfaces/IYVToken.sol";
+import "../../interfaces/IYearnPartnerTracker.sol";
 
 contract YearnNillaVault is BaseNillaEarn {
     using SafeERC20 for IERC20;
 
+    address public PARTNER_ADDRESS = 0x70997970C51812dc3A010C7d01b50e0d17dc79C8; // MOCK-UP
+
     IYVToken public yvToken;
+    IYearnPartnerTracker public yearnPartnerTracker;
+
     IERC20 public baseToken;
     uint8 private _decimals;
 
     event Deposit(address indexed depositor, address indexed receiver, uint256 amount);
     event Withdraw(address indexed withdrawer, address indexed receiver, uint256 amount, uint256 maxLoss);
+    event SetNewPartnerAddress(address newAddress);
 
     function initialize(
-        IYVToken _yvToken,
+        address _yvToken,
+        address _yearnPartnerTracker,
         string memory _name,
         string memory _symbol,
         uint16 _depositFeeBPS,
@@ -27,15 +35,25 @@ contract YearnNillaVault is BaseNillaEarn {
         address _bridge
     ) external {
         __initialize__(_name, _symbol, _depositFeeBPS, _withdrawFeeBPS, _executor, _bridge);
-        yvToken = _yvToken;
-        IERC20 _baseToken = IERC20(address(_yvToken.token()));
+        yvToken = IYVToken(_yvToken);
+        yearnPartnerTracker = IYearnPartnerTracker(_yearnPartnerTracker);
+
+        IERC20 _baseToken = IERC20(address(IYVToken(_yvToken).token()));
         baseToken = _baseToken;
-        baseToken.safeApprove(address(_yvToken), type(uint256).max);
-        _decimals = _yvToken.decimals();
+        _baseToken.safeApprove(_yvToken, type(uint256).max);
+        _baseToken.safeApprove(_yearnPartnerTracker, type(uint256).max);
+
+        _decimals = IYVToken(_yvToken).decimals();
     }
 
     function decimals() public view virtual override returns (uint8) {
         return _decimals;
+    }
+
+    function SetPartnerAddress(address _newAddress) external onlyOwner {
+        require(_newAddress != address(0), "Set to empty address");
+        PARTNER_ADDRESS = _newAddress;
+        emit SetNewPartnerAddress(_newAddress);
     }
 
     function deposit(uint256 _amount, address _receiver) external nonReentrant {
@@ -48,10 +66,8 @@ contract YearnNillaVault is BaseNillaEarn {
         _baseToken.safeTransferFrom(msg.sender, address(this), _amount);
         uint256 receivedBaseToken = _baseToken.balanceOf(address(this)) - baseTokenBefore;
 
-        uint256 yvTokenBefore = _yvToken.balanceOf(address(this));
         // deposit to yearn.
-        _yvToken.deposit(receivedBaseToken, address(this));
-        uint256 receivedYVToken =  _yvToken.balanceOf(address(this)) - yvTokenBefore;
+        uint256 receivedYVToken = yearnPartnerTracker.deposit(address(_yvToken), PARTNER_ADDRESS, receivedBaseToken);
 
         // collect protocol's fee.
         uint256 depositFee = (receivedYVToken * depositFeeBPS) / BPS;
@@ -68,12 +84,15 @@ contract YearnNillaVault is BaseNillaEarn {
         address msgSender = _msgSender(_receiver);
         // burn user's shares
         _burn(msgSender, _shares);
-        uint256 baseTokenBefore = _baseToken.balanceOf(address(this));
+
         uint256 withdrawFee = (_shares * withdrawFeeBPS) / BPS;
         reserves[address(_yvToken)] += withdrawFee;
-        _yvToken.withdraw(_shares - withdrawFee,  msg.sender == executor ? address(this) : _receiver, _maxLoss); // it could return amount the user received from shares
+
+        uint256 baseTokenBefore = _baseToken.balanceOf(address(this));
         // withdraw user's fund.
+        _yvToken.withdraw(_shares - withdrawFee,  msg.sender == executor ? address(this) : _receiver, _maxLoss);
         uint256 receivedBaseToken = _baseToken.balanceOf(address(this)) - baseTokenBefore;
+        
         // bridge token back if cross chain tx.
         // NOTE: need to fix bridge token condition.
         if (msg.sender == executor) {
