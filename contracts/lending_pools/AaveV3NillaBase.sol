@@ -109,4 +109,13 @@ contract AaveV3NillaBase is BaseNillaEarn {
         }
         emit Reinvest(address(lendingPool), _amount);
     }
+
+    function _claimeRewards(IATokenV3 _aToken, IWNative _WETH) internal returns(uint256 receivedWAVAX) {
+        uint256 WAVAXBefore = _WETH.balanceOf(address(this));
+        address[] memory assets = new address[](1);
+        assets[0] = address(_aToken);
+        // amount = MAX_UINT to claim all
+        rewardsController.claimRewards(assets, type(uint256).max, address(this), address(_WETH));
+        receivedWAVAX = _WETH.balanceOf(address(this)) - WAVAXBefore;
+    }
 }

@@ -86,22 +86,14 @@ contract AaveV3NillaLendingPoolETH is AaveV3NillaBase {
     // Only available in Avalanche chain
     function reinvest() external {
         require(msg.sender == worker, "only worker is allowed");
-        require(path[0] != address(aToken), "Asset to swap should not be aToken");
         // gas saving
         IATokenV3 _aToken = aToken;
         IWNative _WETH = IWNative(WETH);
-        uint256 protocolReserves = reserves[address(_aToken)];
         // claim rewards from rewardController
-        uint256 WAVAXBefore = _WETH.balanceOf(address(this));
-        {
-            address[] memory assets = new address[](1);
-            assets[0] = address(_aToken);
-            rewardsController.claimRewards(assets, type(uint256).max, address(this), address(_WETH)); // amount = MAX_UINT to claim all
-        }
-        uint256 receivedWAVAX = _WETH.balanceOf(address(this)) - WAVAXBefore;
-        require(receivedWAVAX > 0, "No rewards to harvest");
+        uint256 receivedWETH = _claimeRewards(_aToken, _WETH);
+        require(receivedWETH > 0, "No rewards to harvest");
         // Calculate worker's fee before swapping
-        uint256 workerFee = receivedWAVAX * harvestFeeBPS / BPS;
-        _reinvest(_aToken, _WETH, workerFee, receivedWAVAX - workerFee);
+        uint256 workerFee = receivedWETH * harvestFeeBPS / BPS;
+        _reinvest(_aToken, _WETH, workerFee, receivedWETH - workerFee);
     }
 }

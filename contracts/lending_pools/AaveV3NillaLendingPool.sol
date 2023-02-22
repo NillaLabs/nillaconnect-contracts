@@ -33,7 +33,8 @@ contract AaveV3NillaLendingPool is AaveV3NillaBase {
         _initialize(_lendingPool, _aToken, _gateway, _weth, _rewardsController, _swapRouter, _name, _symbol, _depositFeeBPS, _withdrawFeeBPS, _harvestFeeBPS, _executor, _bridge);
     }
     
-    function deposit(uint256 _amount, address _receiver) external nonReentrant {
+    function deposit(uint256 _amount, address _receiver) external payable nonReentrant {
+        require(msg.value == 0, "Don't receive any value in this function");
         // gas saving
         IERC20 _baseToken = baseToken;
         IATokenV3 _aToken = aToken;
@@ -93,25 +94,18 @@ contract AaveV3NillaLendingPool is AaveV3NillaBase {
     // Only available in Avalanche chain.
     function reinvest(uint16 _amountOutMin, address[] calldata _path, uint256 _deadline) external {
         require(msg.sender == worker, "only worker is allowed");
-        require(path[0] != address(aToken), "Asset to swap should not be aToken");
+        require(_path[0] != address(aToken), "Asset to swap should not be aToken");
         // gas saving
         IATokenV3 _aToken = aToken;
         IWNative _WETH = IWNative(WETH);
-        
         // claim rewards from rewardController
-        uint256 WAVAXBefore = _WETH.balanceOf(address(this));
-        {
-            address[] memory assets = new address[](1);
-            assets[0] = address(aToken);
-            rewardsController.claimRewards(assets, type(uint256).max, address(this), address(_WETH)); // amount = MAX_UINT to claim all
-        }
-        uint256 receivedWAVAX = _WETH.balanceOf(address(this)) - WAVAXBefore;
-        require(receivedWAVAX > 0, "No rewards to harvest");
+        uint256 receivedWETH = _claimeRewards(_aToken, _WETH);
+        require(receivedWETH > 0, "No rewards to harvest");
         // Calculate worker's fee before swapping
-        uint256 workerFee = receivedWAVAX * harvestFeeBPS / BPS;
+        uint256 workerFee = receivedWETH * harvestFeeBPS / BPS;
         // swap WAVAX -> baseToken
         uint256 baseTokenBefore = baseToken.balanceOf(address(this));
-        swapRouter.swapExactTokensForTokens(receivedWAVAX - workerFee, _amountOutMin, _path, address(this), _deadline);
+        swapRouter.swapExactTokensForTokens(receivedWETH - workerFee, _amountOutMin, _path, address(this), _deadline);
         uint256 receivedBase = baseToken.balanceOf(address(this)) - baseTokenBefore;
         _reinvest(_aToken, _WETH, workerFee, receivedBase); // alredy sub workerFee when swap()
     }
