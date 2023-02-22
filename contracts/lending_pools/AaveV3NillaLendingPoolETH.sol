@@ -54,6 +54,7 @@ contract AaveV3NillaLendingPoolETH is AaveV3NillaBase {
         // gas saving
         address _baseToken = address(baseToken);
         IATokenV3 _aToken = aToken;
+        IAaveV3LendingPool _lendingPool = lendingPool;
         // set msgSender for cross chain tx
         address msgSender = _msgSender(_receiver);
         // burn user's shares
@@ -65,9 +66,9 @@ contract AaveV3NillaLendingPoolETH is AaveV3NillaBase {
         // withdraw user's fund
         uint256 aTokenShareBefore = _aToken.scaledBalanceOf(address(this));
         gateway.withdrawETH(
-            address(lendingPool),
+            address(_lendingPool),
             shareAfterFee.mulDiv(
-                lendingPool.getReserveNormalizedIncome(_baseToken),
+                _lendingPool.getReserveNormalizedIncome(_baseToken),
                 RAY,
                 Math.Rounding.Down
             ),
