@@ -67,7 +67,7 @@ contract AaveV3NillaLendingPoolETH is AaveV3NillaBase {
         gateway.withdrawETH(
             address(lendingPool),
             shareAfterFee.mulDiv(
-                _lendingPool.getReserveNormalizedIncome(_baseToken),
+                lendingPool.getReserveNormalizedIncome(_baseToken),
                 RAY,
                 Math.Rounding.Down
             ),
