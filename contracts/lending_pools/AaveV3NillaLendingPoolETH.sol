@@ -47,7 +47,7 @@ contract AaveV3NillaLendingPoolETH is AaveV3NillaBase {
         reserves[address(_aToken)] += depositFee;
         totalAssets += (receivedAToken - depositFee);
         _mint(_receiver, receivedAToken - depositFee);
-        emit Deposit(msg.sender, _receiver, _amount);
+        emit Deposit(msg.sender, _receiver, msg.value);
     }
 
     function redeem(uint256 _shares, address _receiver) external nonReentrant {
@@ -55,21 +55,32 @@ contract AaveV3NillaLendingPoolETH is AaveV3NillaBase {
         address _baseToken = address(baseToken);
         IATokenV3 _aToken = aToken;
         // set msgSender for cross chain tx
-        address msgSender = _msgSender(_receiver);
-        // burn user's shares
-        _burn(msgSender, _shares);
+        {
+            address msgSender = _msgSender(_receiver);
+            // burn user's shares
+            _burn(msgSender, _shares);
+        }
         // collect protocol's fee
         uint256 withdrawFee = _shares.mulDiv(withdrawFeeBPS, BPS);
         uint256 shareAfterFee = _shares - withdrawFee;
         uint256 nativeTokenBefore = address(this).balance;
         // withdraw user's fund
         uint256 aTokenShareBefore = _aToken.scaledBalanceOf(address(this));
-        gateway.withdrawETH(address(lendingPool), amount, onBehalfOf);
-        uint256 burnedATokenShare = aTokenShareBefore - _aToken.scaledBalanceOf(address(this));
+        gateway.withdrawETH(
+            address(lendingPool),
+            shareAfterFee.mulDiv(
+                lendingPool.getReserveNormalizedIncome(_baseToken),
+                RAY,
+                Math.Rounding.Down
+            ),
+            address(this));
+        {
+            // dust after burn rounding
+            uint256 burnedATokenShare = aTokenShareBefore - _aToken.scaledBalanceOf(address(this));
+            uint256 dust = shareAfterFee - burnedATokenShare;
+            reserves[address(aToken)] += (withdrawFee + dust);
+        }
         uint256 receivedNativeToken = address(this).balance - nativeTokenBefore;
-        // dust after burn rounding
-        uint256 dust = shareAfterFee - burnedATokenShare;
-        reserves[address(aToken)] += (withdrawFee + dust);
         totalAssets -= receivedNativeToken;
         // bridge token back if cross chain tx
         if (msg.sender == executor) {

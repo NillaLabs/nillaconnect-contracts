@@ -94,6 +94,7 @@ contract AaveV3NillaBase is BaseNillaEarn {
     function _reinvest(IATokenV3 _aToken, IWNative _WETH, uint256 _workerFee, uint256 _amount) internal {
         //gas saving
         uint256 protocolReserves = reserves[address(_aToken)];
+        IAaveV3LendingPool _lendingPool = lendingPool;
         
         _WETH.withdraw(_workerFee);
         (bool _success, ) = payable(worker).call{value: _workerFee}("");
@@ -101,13 +102,13 @@ contract AaveV3NillaBase is BaseNillaEarn {
         // re-supply into pool.
         {
             uint256 aTokenBefore = _aToken.scaledBalanceOf(address(this));
-            lendingPool.supply(address(baseToken), _amount, address(this), 0);
+            _lendingPool.supply(address(baseToken), _amount, address(this), 0);
             uint256 receivedAToken = _aToken.scaledBalanceOf(address(this)) - aTokenBefore;
             // calculate protocol reward.
             uint256 protocolReward = protocolReserves.mulDiv(receivedAToken, (totalAssets + protocolReserves));
             reserves[address(_aToken)] += protocolReward;
         }
-        emit Reinvest(address(lendingPool), _amount);
+        emit Reinvest(address(_lendingPool), _amount);
     }
 
     function _claimeRewards(IATokenV3 _aToken, IWNative _WETH) internal returns(uint256 receivedWAVAX) {

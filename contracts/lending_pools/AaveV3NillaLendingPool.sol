@@ -59,10 +59,12 @@ contract AaveV3NillaLendingPool is AaveV3NillaBase {
         IAaveV3LendingPool _lendingPool = lendingPool;
         address _baseToken = address(baseToken);
         IATokenV3 _aToken = aToken;
-        // set msgSender for cross chain tx.
-        address msgSender = _msgSender(_receiver);
-        // burn user's shares
-        _burn(msgSender, _shares);
+        {
+            // set msgSender for cross chain tx.
+            address msgSender = _msgSender(_receiver);
+            // burn user's shares
+            _burn(msgSender, _shares);
+        }
         // collect protocol's fee.
         uint256 withdrawFee = _shares.mulDiv(withdrawFeeBPS, BPS);
         uint256 shareAfterFee = _shares - withdrawFee;
@@ -77,10 +79,12 @@ contract AaveV3NillaLendingPool is AaveV3NillaBase {
             ), // aToken amount rounding down
             msg.sender == executor ? address(this) : _receiver
         );
-        uint256 burnedATokenShare = aTokenShareBefore - _aToken.scaledBalanceOf(address(this));
-        // dust after burn rounding.
-        uint256 dust = shareAfterFee - burnedATokenShare;
-        reserves[address(aToken)] += (withdrawFee + dust);
+        {
+            uint256 burnedATokenShare = aTokenShareBefore - _aToken.scaledBalanceOf(address(this));
+            // dust after burn rounding.
+            uint256 dust = shareAfterFee - burnedATokenShare;
+            reserves[address(aToken)] += (withdrawFee + dust);
+        }
         totalAssets -= receivedBaseToken;
         // bridge token back if cross chain tx.
         if (msg.sender == executor) {
