@@ -42,6 +42,13 @@ contract AaveV3Test is Test {
 
     AaveV3NillaLendingPool public aaveV3Pool;
 
+    struct AaveObj {
+        address  aToken;
+        address  lendingPool;
+        address  gateway;
+        address  rewardsController;
+    }
+
     function setUp() public {
         avalancheFork = vm.createFork("https://avalanche-mainnet.infura.io/v3/e6282a54498e433a87766276d1d4b67b"); // Avalanche
         vm.selectFork(avalancheFork);
@@ -58,16 +65,18 @@ contract AaveV3Test is Test {
         admin = address(new ProxyAdminImpl());
         impl  = address(new AaveV3NillaLendingPool());
 
+        AaveObj memory _aaveObj;
+        _aaveObj.aToken = address(aToken);
+        _aaveObj.gateway = address(gateway);
+        _aaveObj.lendingPool = address(pool);
+        _aaveObj.rewardsController = address(rewardsController);
+
         proxy = new TransparentUpgradeableProxyImplNative(
             impl,
             admin,
             abi.encodeWithSelector(
                 AaveV3NillaLendingPool.initialize.selector,
-                address(pool),
-                address(aToken),
-                address(gateway),
-                WETH,
-                address(rewardsController),
+                _aaveObj,
                 address(swapRouter),
                 "USDC Vault",
                 "USDC",
@@ -165,9 +174,7 @@ contract AaveV3Test is Test {
         uint256 withdrawFee = shares.mulDiv(1, 10_000);
         uint256 reserveBefore = aaveV3Pool.reserves(address(aToken));
         
-        console.log("Block timestamp:", block.timestamp);
-        vm.warp(block.timestamp + 1_000_000_000);
-        console.log("Block timestamp 2:", block.timestamp);
+        vm.warp(block.timestamp + 1_000_000);
         aaveV3Pool.redeem(shares, user);
 
         uint256 addedReserve = aaveV3Pool.reserves(address(aToken)) - reserveBefore;
@@ -269,18 +276,5 @@ contract AaveV3Test is Test {
         console.log("LP balance in aave before deposit:", aTokenBefore);
         console.log("LP balance in aave after deposit:", aTokenAfterDeposit);
         console.log("LP balance in aave after redeem:", aTokenAfterReinvest);
-    }
-
-    function testClaim() public {
-        vm.stopPrank();
-        startHoax(rewarder);
-
-        address[] memory assets = new address[](1);
-        assets[0] = address(aToken);
-
-        console.log("Total Rewards:", rewardsController.getUserRewards(assets, rewarder, WETH));
-        console.log("WETH in Nilla Before:", IWNative(WETH).balanceOf(rewarder));
-        rewardsController.claimRewards(assets, type(uint256).max, rewarder, WETH);
-        console.log("WETH in Nilla After:", IWNative(WETH).balanceOf(rewarder));
     }
 }
