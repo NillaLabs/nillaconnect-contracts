@@ -12,7 +12,7 @@ contract BaseNillaEarn is ERC20Upgradeable, ReentrancyGuardUpgradeable, OwnableU
     using SafeERC20 for IERC20;
     uint16 internal constant BPS = 10000;
 
-    mapping(address => uint256) reserves;
+    mapping(address => uint256) public reserves;
     uint16 public depositFeeBPS;
     uint16 public withdrawFeeBPS;
     address public worker; // wallet to withdraw fee
@@ -88,7 +88,7 @@ contract BaseNillaEarn is ERC20Upgradeable, ReentrancyGuardUpgradeable, OwnableU
         emit WithdrawReserve(msg.sender, _token, _amount);
     }
 
-    function _msgSender(address _user) internal returns (address msgSender) {
+    function _msgSender(address _user) internal view returns (address msgSender) {
         if (msg.sender == executor) {
             // TODO: have to check a prove that cross chain tx is valid.
             // 1.validate
