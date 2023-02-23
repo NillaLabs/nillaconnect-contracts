@@ -16,17 +16,17 @@ contract AaveV3NillaLendingPool is AaveV3NillaBase {
     using Math for uint256;
 
     function initialize(
-        AaveObj memory _aave,
+        address _aToken,
+        address _rewardsController,
+        address _weth,
         address _swapRouter,
-        string memory _name,
-        string memory _symbol,
-        uint16 _depositFeeBPS,
-        uint16 _withdrawFeeBPS,
-        uint16 _harvestFeeBPS,
+        string calldata _name,
+        string calldata _symbol,
+        ProtocolFee calldata _protocolFee,
         address _executor,
         address _bridge
     ) external {
-        _initialize(_aave, _swapRouter, _name, _symbol, _depositFeeBPS, _withdrawFeeBPS, _harvestFeeBPS, _executor, _bridge);
+        _initialize(_aToken, _rewardsController, _weth, _swapRouter, _name, _symbol, _protocolFee, _executor, _bridge);
     }
     
     function deposit(uint256 _amount, address _receiver) external payable nonReentrant {

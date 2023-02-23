@@ -16,26 +16,28 @@ contract AaveV3NillaLendingPoolETH is AaveV3NillaBase {
     using Math for uint256;
     
     function initialize(
-        AaveObj memory _aave,
+        address _aToken,
+        address _rewardsController,
+        address _weth,
         address _swapRouter,
-        string memory _name,
-        string memory _symbol,
-        uint16 _depositFeeBPS,
-        uint16 _withdrawFeeBPS,
-        uint16 _harvestFeeBPS,
+        string calldata _name,
+        string calldata _symbol,
+        ProtocolFee calldata _protocolFee,
         address _executor,
         address _bridge
     ) external {
-        _initialize(_aave, _swapRouter, _name, _symbol, _depositFeeBPS, _withdrawFeeBPS, _harvestFeeBPS, _executor, _bridge);
+        _initialize(_aToken, _rewardsController, _weth, _swapRouter, _name, _symbol, _protocolFee, _executor, _bridge);
     }
     
     function deposit(address _receiver) external payable nonReentrant {
         require(msg.value > 0, "Value is 0");
         // gas saving
         IATokenV3 _aToken = aToken;
+        IWNative _WETH = WETH;
         // supply to Aave V3, using share instead
         uint256 aTokenShareBefore = _aToken.scaledBalanceOf(address(this));
-        gateway.depositETH{value: msg.value}(address(lendingPool), address(this), 0);
+        _WETH.deposit{value: msg.value}();
+        lendingPool.supply(address(baseToken), msg.value, address(this), 0);
         uint256 receivedAToken = _aToken.scaledBalanceOf(address(this)) - aTokenShareBefore;
         // collect protocol's fee
         uint256 depositFee = receivedAToken.mulDiv(depositFeeBPS, BPS);
@@ -49,7 +51,6 @@ contract AaveV3NillaLendingPoolETH is AaveV3NillaBase {
         // gas saving
         address _baseToken = address(baseToken);
         IATokenV3 _aToken = aToken;
-        IAaveV3LendingPool _lendingPool = lendingPool;
         {
             // set msgSender for cross chain tx
             address msgSender = _msgSender(_receiver);
@@ -59,20 +60,18 @@ contract AaveV3NillaLendingPoolETH is AaveV3NillaBase {
         // collect protocol's fee
         uint256 withdrawFee = _shares.mulDiv(withdrawFeeBPS, BPS);
         uint256 shareAfterFee = _shares - withdrawFee;
-        uint256 nativeTokenBefore = address(this).balance;
         // withdraw user's fund
         uint256 aTokenShareBefore = _aToken.scaledBalanceOf(address(this));
-        uint256 amount = shareAfterFee.mulDiv(_lendingPool.getReserveNormalizedIncome(_baseToken),RAY,Math.Rounding.Down);
-        gateway.withdrawETH(
-            address(_lendingPool),
+        uint256 receivedBaseToken = lendingPool.withdraw(
+            _baseToken,
             shareAfterFee.mulDiv(
-                _lendingPool.getReserveNormalizedIncome(_baseToken),
+                lendingPool.getReserveNormalizedIncome(_baseToken),
                 RAY,
                 Math.Rounding.Down
-            ), // aToken amount rounding down
+            ),
             address(this)
         );
-        uint256 receivedNativeToken = address(this).balance - nativeTokenBefore;
+        WETH.withdraw(receivedBaseToken);
         {
             uint256 burnedATokenShare = aTokenShareBefore - _aToken.scaledBalanceOf(address(this));
             // dust after burn rounding
@@ -81,14 +80,14 @@ contract AaveV3NillaLendingPoolETH is AaveV3NillaBase {
         }
         // bridge token back if cross chain tx
         if (msg.sender == executor) {
-            _bridgeTokenBack(_receiver, receivedNativeToken);
-            emit Withdraw(msg.sender, bridge, receivedNativeToken);
+            _bridgeTokenBack(_receiver, receivedBaseToken);
+            emit Withdraw(msg.sender, bridge, receivedBaseToken);
         }
         // else transfer fund to user
         else {
-            (bool success, ) = payable(_receiver).call{value: receivedNativeToken}("");
+            (bool success, ) = payable(_receiver).call{value: receivedBaseToken}("");
             require(success, 'Failed to transfer ETH');
-            emit Withdraw(msg.sender, _receiver, receivedNativeToken);
+            emit Withdraw(msg.sender, _receiver, receivedBaseToken);
         }
     }
 

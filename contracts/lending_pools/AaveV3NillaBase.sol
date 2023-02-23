@@ -11,7 +11,6 @@ import "../BaseNillaEarn.sol";
 import "../../interfaces/IWNative.sol";
 import "../../interfaces/IATokenV3.sol";
 import "../../interfaces/IAaveV3LendingPool.sol";
-import "../../interfaces/IWrappedTokenGatewayV3.sol";
 import "../../interfaces/IRewardsController.sol";
 import "../../interfaces/IJoeRouter.sol";
 
@@ -27,7 +26,6 @@ contract AaveV3NillaBase is BaseNillaEarn {
     IERC20 public baseToken;
     uint8 internal _decimals;
     IAaveV3LendingPool public lendingPool;
-    IWrappedTokenGatewayV3 public gateway;
     IRewardsController public rewardsController;
 
     uint16 public harvestFeeBPS;
@@ -37,40 +35,37 @@ contract AaveV3NillaBase is BaseNillaEarn {
     event Withdraw(address indexed withdrawer, address indexed receiver, uint256 amount);
     event Reinvest(address indexed lendingPool, uint256 amount);
 
-    struct AaveObj {
-        address aToken;
-        address lendingPool;
-        address gateway;
-        address rewardsController;
+    struct ProtocolFee {
+        uint16 depositFeeBPS;
+        uint16 withdrawFeeBPS;
+        uint16 harvestFeeBPS;
     }
 
     function _initialize(
-        AaveObj memory _aave,
+        address _aToken,
+        address _rewardsController,
+        address _weth,
         address _swapRouter,
-        string memory _name,
-        string memory _symbol,
-        uint16 _depositFeeBPS,
-        uint16 _withdrawFeeBPS,
-        uint16 _harvestFeeBPS,
+        string calldata _name,
+        string calldata _symbol,
+        ProtocolFee calldata _protocolFee,
         address _executor,
         address _bridge
     ) internal {
-        __initialize__(_name, _symbol, _depositFeeBPS, _withdrawFeeBPS, _executor, _bridge);
-        harvestFeeBPS = _harvestFeeBPS;
-        lendingPool = IAaveV3LendingPool(_aave.lendingPool);
-        rewardsController = IRewardsController(_aave.rewardsController);
-        IWrappedTokenGatewayV3 _gateway = IWrappedTokenGatewayV3(_aave.gateway);
-        gateway = _gateway;
+        __initialize__(_name, _symbol, _protocolFee.depositFeeBPS, _protocolFee.withdrawFeeBPS, _executor, _bridge);
+        WETH = IWNative(_weth);
+        harvestFeeBPS = _protocolFee.harvestFeeBPS;
         swapRouter = IJoeRouter(_swapRouter);
-        WETH = IWNative(_gateway.getWETHAddress());
-        IERC20(_gateway.getWETHAddress()).safeApprove(_swapRouter, type(uint256).max);
-        IERC20(_gateway.getWETHAddress()).safeApprove(address(_gateway), type(uint256).max);
-        aToken = IATokenV3(_aave.aToken);
-        IERC20 _baseToken = IERC20(IATokenV3(_aave.aToken).UNDERLYING_ASSET_ADDRESS());
-        IERC20(_aave.aToken).safeApprove(address(_gateway), type(uint256).max);
+
+        rewardsController = IRewardsController(_rewardsController);
+        aToken = IATokenV3(_aToken);
+        lendingPool = IAaveV3LendingPool(IATokenV3(_aToken).POOL());
+        IERC20 _baseToken = IERC20(IATokenV3(_aToken).UNDERLYING_ASSET_ADDRESS());
         baseToken = _baseToken;
-        _baseToken.safeApprove(_aave.lendingPool, type(uint256).max);
-        _decimals = IATokenV3(_aave.aToken).decimals();  
+        _baseToken.safeApprove(IATokenV3(_aToken).POOL(), type(uint256).max);
+        IERC20(_weth).safeApprove(_swapRouter, type(uint256).max);
+
+        _decimals = IATokenV3(_aToken).decimals();  
     }
 
     function decimals() public view virtual override returns (uint8) {
@@ -94,6 +89,15 @@ contract AaveV3NillaBase is BaseNillaEarn {
         }
     }
 
+    function _claimeRewards(IATokenV3 _aToken, IWNative _WETH) internal returns(uint256 receivedWAVAX) {
+        uint256 WAVAXBefore = _WETH.balanceOf(address(this));
+        address[] memory assets = new address[](1);
+        assets[0] = address(_aToken);
+        // amount = MAX_UINT to claim all
+        rewardsController.claimRewards(assets, type(uint256).max, address(this), address(_WETH));
+        receivedWAVAX = _WETH.balanceOf(address(this)) - WAVAXBefore;
+    }
+
     function _reinvest(IATokenV3 _aToken, IWNative _WETH, uint256 _workerFee, uint256 _amount) internal {
         //gas saving
         uint256 protocolReserves = reserves[address(_aToken)];
@@ -109,14 +113,5 @@ contract AaveV3NillaBase is BaseNillaEarn {
         uint256 protocolReward = protocolReserves.mulDiv(receivedAToken, (_aToken.scaledBalanceOf(address(this)) + protocolReserves));
         reserves[address(_aToken)] += protocolReward;
         emit Reinvest(address(lendingPool), _amount);
-    }
-
-    function _claimeRewards(IATokenV3 _aToken, IWNative _WETH) internal returns(uint256 receivedWAVAX) {
-        uint256 WAVAXBefore = _WETH.balanceOf(address(this));
-        address[] memory assets = new address[](1);
-        assets[0] = address(_aToken);
-        // amount = MAX_UINT to claim all
-        rewardsController.claimRewards(assets, type(uint256).max, address(this), address(_WETH));
-        receivedWAVAX = _WETH.balanceOf(address(this)) - WAVAXBefore;
     }
 }
