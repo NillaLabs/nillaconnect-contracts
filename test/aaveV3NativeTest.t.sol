@@ -10,6 +10,7 @@ import "../contracts/lending_pools/AaveV3NillaLendingPoolETH.sol";
 
 import "../interfaces/IATokenV3.sol";
 import "../interfaces/IRewardsController.sol";
+import "../../interfaces/IWrappedTokenGatewayV3.sol";
 import "../interfaces/IJoeRouter.sol";
 import "../interfaces/IWNative.sol";
 
@@ -29,14 +30,16 @@ contract AaveV3NativeTest is Test {
     IATokenV3 public aToken = IATokenV3(0x6d80113e533a2C0fe82EaBD35f1875DcEA89Ea97); // WAVAX
     IAaveV3LendingPool public pool = IAaveV3LendingPool(0x794a61358D6845594F94dc1DB02A252b5b4814aD);
     IRewardsController rewardsController = IRewardsController(0x929EC64c34a17401F460460D4B9390518E5B473e);
+    IWrappedTokenGatewayV3 gateway = IWrappedTokenGatewayV3(0x6F143FE2F7B02424ad3CaD1593D6f36c0Aab69d7);
     IJoeRouter swapRouter = IJoeRouter(0x60aE616a2155Ee3d9A68541Ba4544862310933d4);
 
     AaveV3NillaLendingPoolETH public aaveV3Pool;
 
     struct AaveObj {
-        address  aToken;
-        address  lendingPool;
-        address  rewardsController;
+        address aToken;
+        address lendingPool;
+        address gateway;
+        address rewardsController;
     }
 
     function setUp() public {
@@ -50,6 +53,7 @@ contract AaveV3NativeTest is Test {
         vm.label(WETH, "#### WETH ####");
         vm.label(address(rewardsController), "#### Reward Controller ####");
         vm.label(address(swapRouter), "#### Swap Router ####");
+        vm.label(address(gateway), "#### Gateway ####");
 
         admin = address(new ProxyAdminImpl());
         impl  = address(new AaveV3NillaLendingPoolETH());
@@ -57,6 +61,7 @@ contract AaveV3NativeTest is Test {
         AaveObj memory _aaveObj;
         _aaveObj.aToken = address(aToken);
         _aaveObj.lendingPool = address(pool);
+        _aaveObj.gateway = address(gateway);
         _aaveObj.rewardsController = address(rewardsController);
 
         proxy = new TransparentUpgradeableProxyImplNative(
@@ -65,7 +70,6 @@ contract AaveV3NativeTest is Test {
             abi.encodeWithSelector(
                 AaveV3NillaLendingPoolETH.initialize.selector,
                 _aaveObj,
-                WETH,
                 address(swapRouter),
                 "USDC Vault",
                 "USDC",

@@ -38,10 +38,10 @@ contract AaveV3NillaBase is BaseNillaEarn {
     event Reinvest(address indexed lendingPool, uint256 amount);
 
     struct AaveObj {
-        address  aToken;
-        address  lendingPool;
-        address  gateway;
-        address  rewardsController;
+        address aToken;
+        address lendingPool;
+        address gateway;
+        address rewardsController;
     }
 
     function _initialize(
