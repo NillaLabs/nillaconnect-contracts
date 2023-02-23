@@ -5,12 +5,11 @@ import "OpenZeppelin/openzeppelin-contracts@4.7.3/contracts/token/ERC20/IERC20.s
 import "OpenZeppelin/openzeppelin-contracts@4.7.3/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "../contracts/ProxyAdminImpl.sol";
-import "../contracts/TransparentUpgradeableProxyImplAave.sol";
+import "../contracts/TransparentUpgradeableProxyImplNative.sol";
 import "../contracts/lending_pools/AaveV3NillaLendingPoolETH.sol";
 
 import "../interfaces/IATokenV3.sol";
 import "../interfaces/IRewardsController.sol";
-import "../../interfaces/IWrappedTokenGatewayV3.sol";
 import "../interfaces/IJoeRouter.sol";
 import "../interfaces/IWNative.sol";
 
@@ -18,7 +17,7 @@ contract AaveV3NativeTest is Test {
     using SafeERC20 for IERC20;
     using Math for uint256;
     
-    TransparentUpgradeableProxyImplAave public proxy;
+    TransparentUpgradeableProxyImplNative public proxy;
     address public impl;
     address public admin;
     // address public rewarder = 0xA68eEB34418871d844a1301F97353cB20343B65d; // someone who has rewards on AAVE.
@@ -28,18 +27,15 @@ contract AaveV3NativeTest is Test {
     uint256 public avalancheFork;
     IERC20 public baseToken;
     IATokenV3 public aToken = IATokenV3(0x6d80113e533a2C0fe82EaBD35f1875DcEA89Ea97); // WAVAX
-    IAaveV3LendingPool public pool = IAaveV3LendingPool(0x794a61358D6845594F94dc1DB02A252b5b4814aD);
     IRewardsController rewardsController = IRewardsController(0x929EC64c34a17401F460460D4B9390518E5B473e);
-    IWrappedTokenGatewayV3 gateway = IWrappedTokenGatewayV3(0x6F143FE2F7B02424ad3CaD1593D6f36c0Aab69d7);
     IJoeRouter swapRouter = IJoeRouter(0x60aE616a2155Ee3d9A68541Ba4544862310933d4);
 
     AaveV3NillaLendingPoolETH public aaveV3Pool;
 
-    struct AaveObj {
-        address aToken;
-        address lendingPool;
-        address gateway;
-        address rewardsController;
+    struct ProtocolFee {
+        uint16 depositFeeBPS;
+        uint16 withdrawFeeBPS;
+        uint16 harvestFeeBPS;
     }
 
     function setUp() public {
@@ -48,37 +44,34 @@ contract AaveV3NativeTest is Test {
         startHoax(user);
 
         vm.label(user, "#### User ####");
-        vm.label(address(pool), "#### Aave Pool ####");
         vm.label(address(aToken), "#### AToken ####");
         vm.label(WETH, "#### WETH ####");
         vm.label(address(rewardsController), "#### Reward Controller ####");
         vm.label(address(swapRouter), "#### Swap Router ####");
-        vm.label(address(gateway), "#### Gateway ####");
 
         admin = address(new ProxyAdminImpl());
         impl  = address(new AaveV3NillaLendingPoolETH());
 
-        AaveObj memory _aaveObj;
-        _aaveObj.aToken = address(aToken);
-        _aaveObj.lendingPool = address(pool);
-        _aaveObj.gateway = address(gateway);
-        _aaveObj.rewardsController = address(rewardsController);
+        ProtocolFee memory protocolFee;
+        protocolFee.depositFeeBPS = 1;
+        protocolFee.harvestFeeBPS = 1;
+        protocolFee.withdrawFeeBPS = 1;
 
-        proxy = new TransparentUpgradeableProxyImplAave(
+        proxy = new TransparentUpgradeableProxyImplNative(
             impl,
             admin,
             abi.encodeWithSelector(
                 AaveV3NillaLendingPoolETH.initialize.selector,
-                _aaveObj,
+                address(aToken),
+                address(rewardsController),
+                address(WETH),
                 address(swapRouter),
                 "USDC Vault",
                 "USDC",
-                1,    // Deposit Fee BPS
-                1,    // Withdraw Fee BPS  
-                1,    // Harvest Fee BPS
+                protocolFee,
                 executor,
                 address(0)),
-            address(gateway)
+            WETH
         );
         aaveV3Pool = AaveV3NillaLendingPoolETH(payable(address(proxy)));
         aaveV3Pool.setWorker(user);
@@ -150,7 +143,7 @@ contract AaveV3NativeTest is Test {
 
     function testRedeemNormal() public {
         console.log("---------- TEST NORMAL REDEEM ----------");
-        uint256 amount = 999999999000000000505787;
+        uint256 amount = 999999999000000000007715;
         uint256 aTokenBefore = aToken.scaledBalanceOf(address(aaveV3Pool));
         uint256 balanceBefore = user.balance;
 

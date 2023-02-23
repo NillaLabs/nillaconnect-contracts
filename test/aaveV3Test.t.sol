@@ -9,7 +9,6 @@ import "../contracts/TransparentUpgradeableProxyImplNative.sol";
 import "../contracts/lending_pools/AaveV3NillaLendingPool.sol";
 
 import "../interfaces/IATokenV3.sol";
-import "../interfaces/IWrappedTokenGatewayV3.sol";
 import "../interfaces/IRewardsController.sol";
 import "../interfaces/IJoeRouter.sol";
 import "../interfaces/IWNative.sol";
@@ -35,18 +34,15 @@ contract AaveV3Test is Test {
 
     IERC20 public baseToken;
     IATokenV3 public aToken = IATokenV3(0x625E7708f30cA75bfd92586e17077590C60eb4cD);
-    IAaveV3LendingPool public pool = IAaveV3LendingPool(0x794a61358D6845594F94dc1DB02A252b5b4814aD);
-    IWrappedTokenGatewayV3 public gateway = IWrappedTokenGatewayV3(0x6F143FE2F7B02424ad3CaD1593D6f36c0Aab69d7);
     IRewardsController rewardsController = IRewardsController(0x929EC64c34a17401F460460D4B9390518E5B473e);
     IJoeRouter swapRouter = IJoeRouter(0x60aE616a2155Ee3d9A68541Ba4544862310933d4);
 
     AaveV3NillaLendingPool public aaveV3Pool;
 
-    struct AaveObj {
-        address  aToken;
-        address  lendingPool;
-        address  gateway;
-        address  rewardsController;
+    struct ProtocolFee {
+        uint16 depositFeeBPS;
+        uint16 withdrawFeeBPS;
+        uint16 harvestFeeBPS;
     }
 
     function setUp() public {
@@ -55,34 +51,31 @@ contract AaveV3Test is Test {
         startHoax(user);
 
         vm.label(user, "#### User ####");
-        vm.label(address(pool), "#### Aave Pool ####");
         vm.label(address(aToken), "#### AToken ####");
-        vm.label(address(gateway), "#### Gateway ####");
         vm.label(WETH, "#### WETH ####");
         vm.label(address(rewardsController), "#### Reward Controller ####");
         vm.label(address(swapRouter), "#### Swap Router ####");
 
+        ProtocolFee memory protocolFee;
+        protocolFee.depositFeeBPS = 1;
+        protocolFee.harvestFeeBPS = 1;
+        protocolFee.withdrawFeeBPS = 1;
+
         admin = address(new ProxyAdminImpl());
         impl  = address(new AaveV3NillaLendingPool());
-
-        AaveObj memory _aaveObj;
-        _aaveObj.aToken = address(aToken);
-        _aaveObj.gateway = address(gateway);
-        _aaveObj.lendingPool = address(pool);
-        _aaveObj.rewardsController = address(rewardsController);
 
         proxy = new TransparentUpgradeableProxyImplNative(
             impl,
             admin,
             abi.encodeWithSelector(
                 AaveV3NillaLendingPool.initialize.selector,
-                _aaveObj,
+                address(aToken),
+                address(rewardsController),
+                address(WETH),
                 address(swapRouter),
                 "USDC Vault",
                 "USDC",
-                1,    // Deposit Fee BPS
-                1,    // Withdraw Fee BPS  
-                1,    // Harvest Fee BPS
+                protocolFee,
                 executor,
                 address(0)),
             WETH
