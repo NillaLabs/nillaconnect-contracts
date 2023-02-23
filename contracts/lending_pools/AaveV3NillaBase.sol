@@ -64,8 +64,10 @@ contract AaveV3NillaBase is BaseNillaEarn {
         swapRouter = IJoeRouter(_swapRouter);
         WETH = IWNative(_gateway.getWETHAddress());
         IERC20(_gateway.getWETHAddress()).safeApprove(_swapRouter, type(uint256).max);
+        IERC20(_gateway.getWETHAddress()).safeApprove(address(_gateway), type(uint256).max);
         aToken = IATokenV3(_aave.aToken);
         IERC20 _baseToken = IERC20(IATokenV3(_aave.aToken).UNDERLYING_ASSET_ADDRESS());
+        IERC20(_aave.aToken).safeApprove(address(_gateway), type(uint256).max);
         baseToken = _baseToken;
         _baseToken.safeApprove(_aave.lendingPool, type(uint256).max);
         _decimals = IATokenV3(_aave.aToken).decimals();  

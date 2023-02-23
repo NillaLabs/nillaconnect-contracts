@@ -45,6 +45,7 @@ contract AaveV3NillaLendingPoolETH is AaveV3NillaBase {
     }
 
     function redeem(uint256 _shares, address _receiver) external nonReentrant {
+        require(_receiver != address(0), "Redeem to address 0");
         // gas saving
         address _baseToken = address(baseToken);
         IATokenV3 _aToken = aToken;
@@ -61,13 +62,14 @@ contract AaveV3NillaLendingPoolETH is AaveV3NillaBase {
         uint256 nativeTokenBefore = address(this).balance;
         // withdraw user's fund
         uint256 aTokenShareBefore = _aToken.scaledBalanceOf(address(this));
+        uint256 amount = shareAfterFee.mulDiv(_lendingPool.getReserveNormalizedIncome(_baseToken),RAY,Math.Rounding.Down);
         gateway.withdrawETH(
             address(_lendingPool),
             shareAfterFee.mulDiv(
                 _lendingPool.getReserveNormalizedIncome(_baseToken),
                 RAY,
                 Math.Rounding.Down
-            ),
+            ), // aToken amount rounding down
             address(this)
         );
         uint256 receivedNativeToken = address(this).balance - nativeTokenBefore;
