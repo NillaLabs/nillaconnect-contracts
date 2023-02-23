@@ -10,5 +10,7 @@ interface IATokenV3 is IERC20 {
 
     function UNDERLYING_ASSET_ADDRESS() external view returns (address);
 
+    function POOL() external view returns (address);
+
     function totalSupply() external view returns (uint256);
 }
