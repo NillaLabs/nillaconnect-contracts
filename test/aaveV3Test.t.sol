@@ -192,8 +192,6 @@ contract AaveV3Test is Test {
         console.log("LP balance in aave after redeem:", aTokenAfterRedeem);
         console.log("Base Token Before deposit:", baseTokenBefore);
         console.log("Base Token After withdraw:", baseTokenAfter);
-        console.log("USER WETH:", IERC20(WETH).balanceOf(user));
-        console.log("NILLA WETH:", IERC20(WETH).balanceOf(address(aaveV3Pool)));
     }
 
     function testFuzzyRedeem(uint256 amount) public {
