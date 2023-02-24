@@ -6,38 +6,31 @@ import "OpenZeppelin/openzeppelin-contracts@4.7.3/contracts/token/ERC20/utils/Sa
 
 import "../contracts/ProxyAdminImpl.sol";
 import "../contracts/TransparentUpgradeableProxyImplNative.sol";
-import "../contracts/lending_pools/AaveV3NillaLendingPool.sol";
+import "../contracts/lending_pools/AaveV3NillaLendingPoolETH.sol";
 
 import "../interfaces/IATokenV3.sol";
 import "../interfaces/IRewardsController.sol";
 import "../interfaces/IJoeRouter.sol";
 import "../interfaces/IWNative.sol";
 
-contract AaveV3Test is Test {
+contract AaveV3NativeTest is Test {
     using SafeERC20 for IERC20;
     using Math for uint256;
     
     TransparentUpgradeableProxyImplNative public proxy;
     address public impl;
     address public admin;
-    address public rewarder = 0xA68eEB34418871d844a1301F97353cB20343B65d; // someone who has rewards on AAVE.
+    // address public rewarder = 0xA68eEB34418871d844a1301F97353cB20343B65d; // someone who has rewards on AAVE.
     address public user = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266;
-
     address public executor = 0x70997970C51812dc3A010C7d01b50e0d17dc79C8;
-
     address public WETH = 0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7;
-
-    // zero-address
-    address public ZERO_ADDRESS = address(0);
-
     uint256 public avalancheFork;
-
     IERC20 public baseToken;
-    IATokenV3 public aToken = IATokenV3(0x625E7708f30cA75bfd92586e17077590C60eb4cD);
+    IATokenV3 public aToken = IATokenV3(0x6d80113e533a2C0fe82EaBD35f1875DcEA89Ea97); // WAVAX
     IRewardsController rewardsController = IRewardsController(0x929EC64c34a17401F460460D4B9390518E5B473e);
     IJoeRouter swapRouter = IJoeRouter(0x60aE616a2155Ee3d9A68541Ba4544862310933d4);
 
-    AaveV3NillaLendingPool public aaveV3Pool;
+    AaveV3NillaLendingPoolETH public aaveV3Pool;
 
     struct ProtocolFee {
         uint16 depositFeeBPS;
@@ -56,19 +49,19 @@ contract AaveV3Test is Test {
         vm.label(address(rewardsController), "#### Reward Controller ####");
         vm.label(address(swapRouter), "#### Swap Router ####");
 
+        admin = address(new ProxyAdminImpl());
+        impl  = address(new AaveV3NillaLendingPoolETH());
+
         ProtocolFee memory protocolFee;
         protocolFee.depositFeeBPS = 1;
         protocolFee.harvestFeeBPS = 1;
         protocolFee.withdrawFeeBPS = 1;
 
-        admin = address(new ProxyAdminImpl());
-        impl  = address(new AaveV3NillaLendingPool());
-
         proxy = new TransparentUpgradeableProxyImplNative(
             impl,
             admin,
             abi.encodeWithSelector(
-                AaveV3NillaLendingPool.initialize.selector,
+                AaveV3NillaLendingPoolETH.initialize.selector,
                 address(aToken),
                 address(rewardsController),
                 address(WETH),
@@ -80,7 +73,7 @@ contract AaveV3Test is Test {
                 address(0)),
             WETH
         );
-        aaveV3Pool = AaveV3NillaLendingPool(payable(address(proxy)));
+        aaveV3Pool = AaveV3NillaLendingPoolETH(payable(address(proxy)));
         aaveV3Pool.setWorker(user);
         baseToken = IERC20(aaveV3Pool.baseToken());
 
@@ -92,13 +85,12 @@ contract AaveV3Test is Test {
 
     function testDepositNormal() public {
         console.log("---------- TEST NORMAL DEPOSIT ----------");
-        uint256 amount = 1e15;
-        deal(address(baseToken), user, amount);
+        uint256 amount = 1e19;
 
         uint256 aTokenBefore = aToken.scaledBalanceOf(address(aaveV3Pool));
         uint256 reserveBefore = aaveV3Pool.reserves(address(aToken));
 
-        aaveV3Pool.deposit(amount, user);
+        aaveV3Pool.deposit{value: amount}(user);
 
         uint256 aTokenAfter = aToken.scaledBalanceOf(address(aaveV3Pool));
         uint256 reserveAfter = aaveV3Pool.reserves(address(aToken));
@@ -115,13 +107,12 @@ contract AaveV3Test is Test {
 
     function testFuzzyDeposit(uint256 amount) public {
         console.log("---------- TEST FUZZY DEPOSIT ----------");
-        amount = bound(amount, 10, 1e15);
-        deal(address(baseToken), user, amount);
+        amount = bound(amount, 1e15, 1e24);
 
         uint256 aTokenBefore = aToken.scaledBalanceOf(address(aaveV3Pool));
         uint256 reserveBefore = aaveV3Pool.reserves(address(aToken));
 
-        aaveV3Pool.deposit(amount, user);
+        aaveV3Pool.deposit{value: amount}(user);
 
         uint256 aTokenAfter = aToken.scaledBalanceOf(address(aaveV3Pool));
         uint256 reserveAfter = aaveV3Pool.reserves(address(aToken));
@@ -132,36 +123,31 @@ contract AaveV3Test is Test {
     }
 
     function testDepositTooLarge() public {
-        uint256 amount = 1e30;
-        deal(address(baseToken), user, amount);
-        vm.expectRevert(bytes("51"));
-        aaveV3Pool.deposit(amount, user);
+        uint256 amount = 1e50;
+        vm.expectRevert();
+        aaveV3Pool.deposit{value: amount}(user);
     }
 
     function testDepositInvalidAmount() public {
         uint256 amount = 0;
-        deal(address(baseToken), user, amount);
-        vm.expectRevert(bytes("26"));
-        aaveV3Pool.deposit(amount, user);
+        vm.expectRevert();
+        aaveV3Pool.deposit{value: amount}(user);
     }
 
     function testDepositInvalidAddress() public {
         uint256 amount = 1_000;
         deal(address(baseToken), user, amount);
-        vm.expectRevert(bytes("ERC20: mint to the zero address"));
-        aaveV3Pool.deposit(amount, address(0));
+        vm.expectRevert();
+        aaveV3Pool.deposit{value: amount}(address(0));
     }
 
     function testRedeemNormal() public {
         console.log("---------- TEST NORMAL REDEEM ----------");
-        uint256 amount = 1e15;
-        deal(address(baseToken), user, amount);
-
+        uint256 amount = 999999999000000000007715;
         uint256 aTokenBefore = aToken.scaledBalanceOf(address(aaveV3Pool));
-        uint256 baseTokenBefore = baseToken.balanceOf(user);
+        uint256 balanceBefore = user.balance;
 
-        aaveV3Pool.deposit(amount, user);
-
+        aaveV3Pool.deposit{value: amount}(user);
         uint256 aTokenAfterDeposit = aToken.scaledBalanceOf(address(aaveV3Pool));
         uint256 shares = aaveV3Pool.balanceOf(user);  // Redeem total shares
         uint256 withdrawFee = shares.mulDiv(1, 10_000);
@@ -176,29 +162,27 @@ contract AaveV3Test is Test {
 
         assertEq(addedReserve, withdrawFee + dust);
         assertEq(aaveV3Pool.balanceOf(user), 0);
-
-        uint256 baseTokenAfter = baseToken.balanceOf(user);
+    
         uint256 aTokenAfterRedeem = aToken.scaledBalanceOf(address(aaveV3Pool));
 
         console.log("LP balance in aave before deposit:", aTokenBefore);
         console.log("LP balance in aave after deposit:", aTokenAfterDeposit);
         console.log("LP balance in aave after redeem:", aTokenAfterRedeem);
-        console.log("Base Token Before deposit:", baseTokenBefore);
-        console.log("Base Token After withdraw:", baseTokenAfter);
+        console.log("User Balance Before D:", balanceBefore);
+        console.log("User Balance After  W:", user.balance);
     }
 
     function testFuzzyRedeem(uint256 amount) public {
         console.log("---------- TEST FUZZY REDEEM ----------");
-        amount = bound(amount, 10, 1e15);
-        deal(address(baseToken), user, amount);
-        aaveV3Pool.deposit(amount, user);
+        amount = bound(amount, 1e15, 1e24);
+        aaveV3Pool.deposit{value: amount}(user);
 
         uint256 shares = aaveV3Pool.balanceOf(user);  // Redeem total shares
         uint256 aTokenAfterDeposit = aToken.scaledBalanceOf(address(aaveV3Pool));
         uint256 withdrawFee = shares.mulDiv(1, 10_000);
         uint256 reserveBefore = aaveV3Pool.reserves(address(aToken));
         
-        vm.warp(block.timestamp + 1_000_000_000);
+        vm.warp(block.timestamp + 1_000_000);
         aaveV3Pool.redeem(shares, user);
 
         uint256 addedReserve = aaveV3Pool.reserves(address(aToken)) - reserveBefore;
@@ -211,39 +195,35 @@ contract AaveV3Test is Test {
 
     function testRedeemTooLarge() public {
         uint256 amount = 1e10;
-        deal(address(baseToken), user, amount);
-        aaveV3Pool.deposit(amount, user);
+        aaveV3Pool.deposit{value: amount}(user);
 
         uint256 shares = aaveV3Pool.balanceOf(user);
-        vm.expectRevert(bytes("ERC20: burn amount exceeds balance"));
+        vm.expectRevert();
         aaveV3Pool.redeem(shares * 10**10, user);
     }
 
     function testRedeemInvalidAmount() public {
         uint256 amount = 1e10;
-        deal(address(baseToken), user, amount);
-        aaveV3Pool.deposit(amount, user);
+        aaveV3Pool.deposit{value: amount}(user);
 
-        vm.expectRevert(bytes("26"));
+        vm.expectRevert();
         aaveV3Pool.redeem(0, user);
     }
 
     function testRedeemInvalidAddress() public {
         uint256 amount = 1e10;
-        deal(address(baseToken), user, amount);
-        aaveV3Pool.deposit(amount, user);
+        aaveV3Pool.deposit{value: amount}(user);
 
-        vm.expectRevert(bytes("ERC20: transfer to the zero address"));
+        vm.expectRevert();
         aaveV3Pool.redeem(10_000, address(0));
     }
 
     function testReinvest() public {
         console.log("---------- TEST NORMAL REDEEM ----------");
-        uint256 amount = 1e9;
-        deal(address(baseToken), user, amount);
+        uint256 amount = 1e19;
 
         uint256 aTokenBefore = aToken.scaledBalanceOf(address(aaveV3Pool));
-        aaveV3Pool.deposit(amount, user);
+        aaveV3Pool.deposit{value: amount}(user);
         uint256 aTokenAfterDeposit = aToken.scaledBalanceOf(address(aaveV3Pool));
 
         vm.stopPrank();
@@ -256,12 +236,7 @@ contract AaveV3Test is Test {
         vm.stopPrank();
         startHoax(user);
 
-        address[] memory _path = new address[](2);
-        _path[0] = WETH;
-        _path[1] = address(baseToken);
-        uint256 _deadline = block.timestamp + 1000;
-
-        aaveV3Pool.reinvest(100, _path, _deadline);
+        aaveV3Pool.reinvest();
         uint256 aTokenAfterReinvest = aToken.scaledBalanceOf(address(aaveV3Pool));
 
         console.log("LP balance in aave before deposit:", aTokenBefore);
