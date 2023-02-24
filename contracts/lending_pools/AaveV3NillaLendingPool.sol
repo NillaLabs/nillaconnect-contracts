@@ -16,21 +16,17 @@ contract AaveV3NillaLendingPool is AaveV3NillaBase {
     using Math for uint256;
 
     function initialize(
-        address _lendingPool,
         address _aToken,
-        address _gateway,
-        address _weth,
         address _rewardsController,
+        address _weth,
         address _swapRouter,
-        string memory _name,
-        string memory _symbol,
-        uint16 _depositFeeBPS,
-        uint16 _withdrawFeeBPS,
-        uint16 _harvestFeeBPS,
+        string calldata _name,
+        string calldata _symbol,
+        ProtocolFee calldata _protocolFee,
         address _executor,
         address _bridge
     ) external {
-        _initialize(_lendingPool, _aToken, _gateway, _weth, _rewardsController, _swapRouter, _name, _symbol, _depositFeeBPS, _withdrawFeeBPS, _harvestFeeBPS, _executor, _bridge);
+        _initialize(_aToken, _rewardsController, _weth, _swapRouter, _name, _symbol, _protocolFee, _executor, _bridge);
     }
     
     function deposit(uint256 _amount, address _receiver) external payable nonReentrant {
@@ -49,7 +45,6 @@ contract AaveV3NillaLendingPool is AaveV3NillaBase {
         // collect protocol's fee.
         uint256 depositFee = receivedAToken.mulDiv(depositFeeBPS, BPS);
         reserves[address(_aToken)] += depositFee;
-        totalAssets += (receivedAToken - depositFee);
         _mint(_receiver, receivedAToken - depositFee);
         emit Deposit(msg.sender, _receiver, _amount);
     }
@@ -85,7 +80,6 @@ contract AaveV3NillaLendingPool is AaveV3NillaBase {
             uint256 dust = shareAfterFee - burnedATokenShare;
             reserves[address(aToken)] += (withdrawFee + dust);
         }
-        totalAssets -= receivedBaseToken;
         // bridge token back if cross chain tx.
         if (msg.sender == executor) {
             _bridgeTokenBack(_receiver, receivedBaseToken);
