@@ -59,7 +59,7 @@ contract AaveV2NillaLendingPool is BaseNillaEarn {
         // deposit to Aave v2.
         // using share not rebase token.
         uint256 aTokenShareBefore = _aToken.scaledBalanceOf(address(this));
-        lendingPool.deposit(address(_baseToken), _amount, address(this), 0);
+        lendingPool.deposit(address(_baseToken), receivedBaseToken, address(this), 0);
         uint256 received = _aToken.scaledBalanceOf(address(this)) - aTokenShareBefore;
         // collect protocol's fee.
         uint256 depositFee = (received * depositFeeBPS) / BPS;
