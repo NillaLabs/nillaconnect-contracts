@@ -1,7 +1,7 @@
 import click
 import eth_utils
 
-from brownie import accounts, network, interface, ZERO_ADDRESS
+from brownie import accounts, network, interface, ZERO_ADDRESS, Contract
 from brownie import ProxyAdminImpl, YearnNillaVault, TransparentUpgradeableProxyImpl
 
 network.priority_fee("2 gwei")
@@ -22,13 +22,10 @@ def main():
     impl = YearnNillaVault.deploy({'from': deployer})
     yv_token = interface.IYVToken("0xa258C4606Ca8206D8aA700cE2143D7db854D168c")
     yearn_partner_tracker = interface.IYearnPartnerTracker("0x8ee392a4787397126C163Cb9844d7c447da419D8")
-    #     IYearnPartnerTracker yearnPartnerTracker = IYearnPartnerTracker(0x8ee392a4787397126C163Cb9844d7c447da419D8); // for mainnet
-    executor = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8";
-
-    # print(impl.initialize)
+    executor = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
     yearn_initilize_encoded = encode_function_data(impl.initialize,
-                                                   yv_token,
-                                                   yearn_partner_tracker,
+                                                   yv_token.address,
+                                                   yearn_partner_tracker.address,
                                                    "USDC Vault",
                                                    "USDC",
                                                    3,
@@ -36,39 +33,11 @@ def main():
                                                    executor,
                                                    ZERO_ADDRESS
                                                    )
-    # print(yearn_initilize_encoded)
-    proxy = TransparentUpgradeableProxyImpl.deploy(
+    proxy_impl = TransparentUpgradeableProxyImpl.deploy(
             impl,
             admin,
             yearn_initilize_encoded,
             {'from': deployer}
             )
-
-    # print(proxy)
-    vault = YearnNillaVault(proxy)
-    print(yv_token.dict())
-    # # print(impl.initialize)
-    # print(ayo)
-
-
-
-    # proxy = TransparentUpgradeableProxyImpl.deploy(
-    #         impl,
-    #         proxy_admin,
-    #         (YearnNillaVault.initialize.selector)
-    #         )
-        # proxy = new TransparentUpgradeableProxyImpl(
-        #     impl,
-        #     admin,
-        #     abi.encodeWithSelector(
-        #         YearnNillaVault.initialize.selector,
-        #         yvToken,
-        #         yearnPartnerTracker,
-        #         "USDC Vault",
-        #         "USDC",
-        #         3,
-        #         3,
-        #         executor,
-        #         address(0))
-        # );
-
+    proxy_vault = Contract.from_abi("YearnNillaVault", proxy_impl.address, impl.abi)
+    print(proxy_vault)
