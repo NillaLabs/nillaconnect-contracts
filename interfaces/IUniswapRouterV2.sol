@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.17;
 
-interface IJoeRouter {    
+interface IUniswapRouterV2 {    
     function swapExactTokensForTokens(
         uint256 amountIn,
         uint256 amountOutMin,

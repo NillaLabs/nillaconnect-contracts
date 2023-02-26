@@ -10,7 +10,7 @@ import "../contracts/lending_pools/AaveV3NillaLendingPool.sol";
 
 import "../interfaces/IATokenV3.sol";
 import "../interfaces/IRewardsController.sol";
-import "../interfaces/IJoeRouter.sol";
+import "../interfaces/IUniswapRouterV2.sol";
 import "../interfaces/IWNative.sol";
 
 contract AaveV3Test is Test {
@@ -35,7 +35,7 @@ contract AaveV3Test is Test {
     IERC20 public baseToken;
     IATokenV3 public aToken = IATokenV3(0x625E7708f30cA75bfd92586e17077590C60eb4cD);
     IRewardsController rewardsController = IRewardsController(0x929EC64c34a17401F460460D4B9390518E5B473e);
-    IJoeRouter swapRouter = IJoeRouter(0x60aE616a2155Ee3d9A68541Ba4544862310933d4);
+    IUniswapRouterV2 swapRouter = IUniswapRouterV2(0x60aE616a2155Ee3d9A68541Ba4544862310933d4);
 
     AaveV3NillaLendingPool public aaveV3Pool;
 
