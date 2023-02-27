@@ -1,4 +1,4 @@
-## Testin
+## Testing
 
 ### Dependencies
 - [foundry](https://book.getfoundry.sh/getting-started/installation)
