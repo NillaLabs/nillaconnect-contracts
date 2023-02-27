@@ -7,7 +7,7 @@ project_structure:
     tests: tests
 
 networks:
-    default: development
+    default: mainnet-fork
     development:
         gas_limit: max
         gas_buffer: 1
