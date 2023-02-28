@@ -72,7 +72,7 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
         return _decimals;
     }
     
-    function deposit(uint256 _amount, address _receiver) external nonReentrant {
+    function deposit(uint256 _amount, address _receiver) external nonReentrant returns (uint256) {
         // gas saving
         IERC20 _baseToken = baseToken;
         IATokenV3 _aToken = aToken;
@@ -89,9 +89,10 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
         reserves[address(_aToken)] += depositFee;
         _mint(_receiver, receivedAToken - depositFee);
         emit Deposit(msg.sender, _receiver, _amount);
+        return (receivedAToken - depositFee);
     }
 
-    function redeem(uint256 _shares, address _receiver) external nonReentrant {
+    function redeem(uint256 _shares, address _receiver) external nonReentrant returns (uint256) {
         // gas saving
         IAaveV3LendingPool _lendingPool = lendingPool;
         address _baseToken = address(baseToken);
@@ -129,6 +130,7 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
         }
         // else transfer fund to user.
         else emit Withdraw(msg.sender, _receiver, receivedBaseToken);
+        return receivedBaseToken;
     }
 
     function withdrawReserve(address _token, uint256 _amount) external override {

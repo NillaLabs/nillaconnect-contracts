@@ -56,7 +56,7 @@ contract YearnNillaVault is BaseNillaEarn {
         emit SetNewPartnerAddress(_newAddress);
     }
 
-    function deposit(uint256 _amount, address _receiver) external nonReentrant {
+    function deposit(uint256 _amount, address _receiver) external nonReentrant returns (uint256) {
         //gas saving
         IERC20 _baseToken = baseToken;
         IYVToken _yvToken = yvToken;
@@ -74,9 +74,10 @@ contract YearnNillaVault is BaseNillaEarn {
         reserves[address(_yvToken)] += depositFee;
         _mint(_receiver, receivedYVToken - depositFee);
         emit Deposit(msg.sender, _receiver, _amount);
+        return receivedYVToken - depositFee;
     }
 
-    function redeem(uint256 _shares, address _receiver, uint256 _maxLoss) external nonReentrant {
+    function redeemWithMaxLoss(uint256 _shares, address _receiver, uint256 _maxLoss) external nonReentrant returns (uint256) {
         // gas saving
         IERC20 _baseToken = baseToken;
         IYVToken _yvToken = yvToken;
@@ -103,5 +104,6 @@ contract YearnNillaVault is BaseNillaEarn {
             // NOTE: if not need, del _maxLoss later
             emit Withdraw(msg.sender, _receiver, receivedBaseToken, _maxLoss);
         }
+        return receivedBaseToken;
     }
 }

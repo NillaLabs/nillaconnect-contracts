@@ -40,7 +40,7 @@ contract IronBankNillaLendingPool is BaseNillaEarn {
         return _decimals;
     }
 
-    function deposit(uint256 _amount, address _receiver) external nonReentrant {
+    function deposit(uint256 _amount, address _receiver) external nonReentrant returns (uint256) {
         // gas saving
         IERC20 _baseToken = baseToken;
         ICToken _cToken = cToken;
@@ -57,9 +57,10 @@ contract IronBankNillaLendingPool is BaseNillaEarn {
         reserves[address(_cToken)] += depositFee;
         _mint(_receiver, receivedCToken - depositFee);
         emit Deposit(msg.sender, _receiver, _amount);
+        return (receivedCToken - depositFee);
     }
 
-    function redeem(uint256 _shares, address _receiver) external nonReentrant {
+    function redeem(uint256 _shares, address _receiver) external nonReentrant returns (uint256) {
         // gas saving
         IERC20 _baseToken = baseToken;
         ICToken _cToken = cToken;
@@ -84,5 +85,6 @@ contract IronBankNillaLendingPool is BaseNillaEarn {
             _baseToken.safeTransfer(_receiver, receivedBaseToken);
             emit Withdraw(msg.sender, _receiver, receivedBaseToken);
         }
+        return receivedBaseToken;
     }
 }
