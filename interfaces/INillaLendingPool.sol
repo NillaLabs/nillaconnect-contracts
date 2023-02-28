@@ -9,7 +9,19 @@ interface INillaLendingPool is IERC20 {
 
     function baseToken() external view returns (address);
 
-    function deposit(uint256, address) external returns (uint256);
+    function deposit(
+        uint256 amount,
+        address receiver
+    ) external returns (uint256);
 
-    function redeem(uint256, address) external returns (uint256);
+    function redeem(
+        uint256 amount,
+        address receiver
+    ) external returns (uint256);
+
+    function redeemWithMaxLoss(
+        uint256 amount,
+        address receiver,
+        uint256 maxLoss
+    ) external returns (uint256);
 }
