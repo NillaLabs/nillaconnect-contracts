@@ -16,25 +16,27 @@ contract NativeGateway {
         wNative = _wNative;
     }
 
-    function deposit(INillaLendingPool _lendingPool) external payable {
+    function deposit(address _lendingPool) external payable {
         wNative.deposit{ value: msg.value }();
-        _ensureApprove(address(_lendingPool));
-        _lendingPool.deposit(msg.value, msg.sender);
+        _ensureApprove(_lendingPool);
+        INillaLendingPool(_lendingPool).deposit(msg.value, msg.sender);
     }
 
-    function redeem(INillaLendingPool _lendingPool, uint256 _shares) external {
-        IERC20(address(_lendingPool)).safeTransferFrom(msg.sender, address(this), _shares);
-        uint256 wNativeBalanceBefore = wNative.balanceOf(address(this));
-        _lendingPool.redeem(_shares, address(this));
-        uint256 receivedAmount = wNative.balanceOf(address(this)) - wNativeBalanceBefore;
-        wNative.withdraw(receivedAmount);
+    function redeem(address _lendingPool, uint256 _shares) external {
+        IWNative _wNative = wNative;
+        IERC20(_lendingPool).safeTransferFrom(msg.sender, address(this), _shares);
+        uint256 wNativeBalanceBefore = _wNative.balanceOf(address(this));
+        INillaLendingPool(_lendingPool).redeem(_shares, address(this));
+        uint256 receivedAmount = _wNative.balanceOf(address(this)) - wNativeBalanceBefore;
+        _wNative.withdraw(receivedAmount);
         (bool success, ) = msg.sender.call{ value: receivedAmount }(new bytes(0));
         require(success, "!withdraw");
     }
 
     function _ensureApprove(address _spender) internal {
-        if (wNative.allowance(address(this), _spender) == 0) {
-            IERC20(address(wNative)).safeApprove(_spender, type(uint256).max);
+        IWNative _wNative = wNative;
+        if (_wNative.allowance(address(this), _spender) == 0) {
+            IERC20(address(_wNative)).safeApprove(_spender, type(uint256).max);
         }
     }
 
