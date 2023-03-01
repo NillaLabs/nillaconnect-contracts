@@ -53,7 +53,6 @@ contract IronBankNillaLendingPool is BaseNillaEarn {
     function deposit(uint256 _amount, address _receiver) external payable nonReentrant returns (uint256) {
         // gas saving
         ILido _lido = lido;
-        IERC20 _baseToken = baseToken;
         // submit to Lido Finance.
         uint256 receivedBase = _lido.submit{value: msg.value}(address(this));
         // collect protocol's fee.
