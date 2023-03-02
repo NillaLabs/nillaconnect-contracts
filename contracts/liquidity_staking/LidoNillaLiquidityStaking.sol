@@ -39,8 +39,8 @@ contract LidoNillaLiquidityStaking is BaseNillaEarn {
         __initialize__(_name, _symbol, _depositFeeBPS, _withdrawFeeBPS, _executor, _bridge);
         lido = ILido(_lido);
         swapRouter = IUniswapRouterV2(_swapRouter);
-        WETH = IWNative(_weth);
         baseToken = IERC20(_lido);
+        WETH = IWNative(_weth);
         IERC20(_weth).safeApprove(_swapRouter, type(uint256).max);
         IERC20(_lido).safeApprove(_swapRouter, type(uint256).max);
     }
@@ -68,16 +68,16 @@ contract LidoNillaLiquidityStaking is BaseNillaEarn {
         // gas saving
         IWNative _WETH = WETH;
         ILido _lido = lido;
-        // set msgSender for cross chain tx.
+        // set msgSender for cross chain tx
         address msgSender = _msgSender(_receiver);
         // burn user's shares
         _burn(msgSender, _shares);
-        // collect protocol's fee.
+        // collect protocol's fee
         uint256 withdrawFee = (_shares * withdrawFeeBPS) / BPS;
         reserves[address(lido)] += withdrawFee;
         // convert shares to amount
         uint256 amount = _shares.mulDiv(_lido.totalSupply(), _lido.getTotalShares());
-        // swap user's fund.
+        // swap user's fund
         uint256 WETHBefore = IERC20(_WETH).balanceOf(address(this));
         swapRouter.swapExactTokensForTokens(amount, _amountOutMin, _path, address(this), _deadline);
         uint256 receivedWETH = IERC20(_WETH).balanceOf(address(this)) - WETHBefore;
@@ -88,7 +88,10 @@ contract LidoNillaLiquidityStaking is BaseNillaEarn {
         }
         // else transfer fund to user.
         else {
-            IERC20(_WETH).safeTransfer(_receiver, receivedWETH);
+            // unwrap WETH
+            _WETH.withdraw(receivedWETH);
+            (bool success, ) = payable(_receiver).call{ value: receivedWETH}("");
+            require(success, "!withdraw");
             emit Withdraw(msg.sender, _receiver, receivedWETH);
         }
         return receivedWETH;
