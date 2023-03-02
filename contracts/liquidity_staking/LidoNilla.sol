@@ -50,7 +50,7 @@ contract IronBankNillaLendingPool is BaseNillaEarn {
         return _decimals;
     }
 
-    function deposit(uint256 _amount, address _receiver) external payable nonReentrant returns (uint256) {
+    function deposit(address _receiver) external payable nonReentrant returns (uint256) {
         // gas saving
         ILido _lido = lido;
         // submit to Lido Finance.
@@ -59,7 +59,7 @@ contract IronBankNillaLendingPool is BaseNillaEarn {
         uint256 depositFee = (receivedBase * depositFeeBPS) / BPS;
         reserves[address(_lido)] += depositFee;
         _mint(_receiver, receivedBase - depositFee);
-        emit Deposit(msg.sender, _receiver, _amount);
+        emit Deposit(msg.sender, _receiver, msg.value);
         return (receivedBase - depositFee);
     }
 
