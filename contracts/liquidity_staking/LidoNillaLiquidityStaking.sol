@@ -12,7 +12,7 @@ import "../../interfaces/ILido.sol";
 import "../../interfaces/IWNative.sol";
 import "../../interfaces/IUniswapRouterV2.sol";
 
-contract IronBankNillaLendingPool is BaseNillaEarn {
+contract LidoNillaLiquidityStaking is BaseNillaEarn {
     using SafeERC20 for IERC20;
     using Math for uint256;
 
@@ -28,7 +28,6 @@ contract IronBankNillaLendingPool is BaseNillaEarn {
     function initialize(
         address _lido,
         address _swapRouter,
-        address _stETH,
         address _weth,
         string memory _name,
         string memory _symbol,
@@ -41,9 +40,9 @@ contract IronBankNillaLendingPool is BaseNillaEarn {
         lido = ILido(_lido);
         swapRouter = IUniswapRouterV2(_swapRouter);
         WETH = IWNative(_weth);
-        baseToken = IERC20(_stETH);
+        baseToken = IERC20(_lido);
         IERC20(_weth).safeApprove(_swapRouter, type(uint256).max);
-        IERC20(_stETH).safeApprove(_swapRouter, type(uint256).max);
+        IERC20(_lido).safeApprove(_swapRouter, type(uint256).max);
     }
 
     function decimals() public view virtual override returns (uint8) {
@@ -54,7 +53,9 @@ contract IronBankNillaLendingPool is BaseNillaEarn {
         // gas saving
         ILido _lido = lido;
         // submit to Lido Finance.
-        uint256 receivedBase = _lido.submit{value: msg.value}(address(this));
+        uint256 baseBefore = _lido.balanceOf(address(this));
+        _lido.submit{value: msg.value}(address(this));
+        uint256 receivedBase = _lido.balanceOf(address(this)) - baseBefore;
         // collect protocol's fee.
         uint256 depositFee = (receivedBase * depositFeeBPS) / BPS;
         reserves[address(_lido)] += depositFee;
