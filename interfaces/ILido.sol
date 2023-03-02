@@ -2,7 +2,9 @@
 
 pragma solidity ^0.8.17;
 
-interface ILido {
+import "OpenZeppelin/openzeppelin-contracts@4.7.3/contracts/token/ERC20/IERC20.sol";
+
+interface ILido is IERC20 {
     /**
     *  @notice Adds eth to the pool
     *  @return StETH Amount of StETH generated
