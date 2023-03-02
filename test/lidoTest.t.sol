@@ -56,6 +56,7 @@ contract LidoTest is Test {
 
         nilla = LidoNillaLiquidityStaking(payable(address(proxy)));
         baseToken = nilla.baseToken();
+        baseToken.safeApprove(address(nilla), type(uint256).max);
 
         vm.label(address(nilla), "#### Nilla ####");
         vm.label(address(baseToken), "#### Lido / stETH ####");
@@ -73,14 +74,66 @@ contract LidoTest is Test {
         uint256 baseAfter = lido.balanceOf(address(nilla));
         uint256 depositFee = (baseAfter - baseBefore) * 1 / 10_000;
 
-        console.log("Base B:", baseBefore);
-        console.log("Base A:", baseAfter);
-        console.log("Reserve B:", reserveBefore);
-        console.log("Reserve A:", reserveAfter);
-        console.log("Deposit Fee:", depositFee);
+        assertEq(reserveAfter - reserveBefore, depositFee);
+        assertEq(nilla.balanceOf(user), baseAfter - depositFee);
+
+        // console.log("Base B:", baseBefore);
+        // console.log("Base A:", baseAfter);
+        // console.log("Reserve B:", reserveBefore);
+        // console.log("Reserve A:", reserveAfter);
+        // console.log("Deposit Fee:", depositFee);
+    }
+
+    function testFuzzyDeposit(uint256 amount) public {
+        amount = bound(amount, 1e15, 1e20);
+
+        uint256 baseBefore = lido.balanceOf(address(nilla));
+        uint256 reserveBefore = nilla.reserves(address(lido));
+
+        nilla.deposit{value: amount}(user);
+
+        uint256 reserveAfter = nilla.reserves(address(lido));
+        uint256 baseAfter = lido.balanceOf(address(nilla));
+        uint256 depositFee = (baseAfter - baseBefore) * 1 / 10_000;
 
         assertEq(reserveAfter - reserveBefore, depositFee);
         assertEq(nilla.balanceOf(user), baseAfter - depositFee);
     }
 
+    function testDepositTooLarge() public {
+        uint256 amount = 1e30;
+
+        vm.expectRevert(bytes("STAKE_LIMIT"));
+        nilla.deposit{value: amount}(user);
+    }
+
+    function testDepositInvalidAmount() public {
+        uint256 amount = 0;
+        vm.expectRevert();
+        nilla.deposit{value: amount}(user);
+    }
+
+    function testRedeemNormal() public {
+        uint256 amount = 1e19;
+        nilla.deposit{value: amount}(user);
+
+        vm.warp(block.timestamp + 1_000_000);
+
+        uint256 shares = nilla.balanceOf(user);  // Redeem total shares
+
+        uint256 withdrawFee = shares * 1 / 10_000;
+        uint256 reserveBefore = nilla.reserves(address(lido));
+        
+        uint256 balanceB = user.balance;
+        uint256 amountOutMin = 1e10;
+        address[] memory path = new address[](2);
+        path[0] = address(lido);
+        path[1] = address(WETH);
+        uint256 receivedETH = nilla.redeem(shares, user, amountOutMin, path, block.timestamp);
+        
+        uint256 balanceA = user.balance;
+        uint256 reserveAfter = nilla.reserves(address(lido));
+        assertEq(reserveAfter - reserveBefore, withdrawFee);
+        assertEq(receivedETH, balanceA - balanceB);
+    }
 }
