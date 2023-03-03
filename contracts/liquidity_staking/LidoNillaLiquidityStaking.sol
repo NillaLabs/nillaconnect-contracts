@@ -17,8 +17,9 @@ contract LidoNillaLiquidityStaking is BaseNillaEarn {
     using Math for uint256;
 
     ILido public lido;
-    IUniswapRouterV2 public swapRouter;
     IWNative public WETH;
+    IUniswapRouterV2 public swapRouter;
+    
     IERC20 public baseToken;
     uint8 private constant _decimals = 18; // stETH's decimals is 18
 
@@ -64,7 +65,7 @@ contract LidoNillaLiquidityStaking is BaseNillaEarn {
         return (receivedBase - depositFee);
     }
 
-    function redeem(uint256 _shares, address _receiver, uint256 _amountOutMin, address[] calldata _path, uint256 _deadline) external nonReentrant returns (uint256) {
+    function redeem(uint256 _shares, address _receiver, uint256 _amountOutMin, uint256 _deadline) external nonReentrant returns (uint256) {
         // gas saving
         IWNative _WETH = WETH;
         ILido _lido = lido;
@@ -78,8 +79,11 @@ contract LidoNillaLiquidityStaking is BaseNillaEarn {
         // convert shares to amount
         uint256 amount = _shares.mulDiv(_lido.totalSupply(), _lido.getTotalShares());
         // swap user's fund
+        address[] memory path = new address[](2);
+        path[0] = address(lido);
+        path[1] = address(WETH);
         uint256 WETHBefore = IERC20(_WETH).balanceOf(address(this));
-        swapRouter.swapExactTokensForTokens(amount, _amountOutMin, _path, address(this), _deadline);
+        swapRouter.swapExactTokensForTokens(amount, _amountOutMin, path, address(this), _deadline);
         uint256 receivedWETH = IERC20(_WETH).balanceOf(address(this)) - WETHBefore;
         // bridge token back if cross chain tx.
         if (msg.sender == executor) {
