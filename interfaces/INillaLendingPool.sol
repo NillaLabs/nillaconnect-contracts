@@ -24,19 +24,10 @@ interface INillaLendingPool is IERC20 {
         address receiver
     ) external returns (uint256);
 
-    // redeem in Yearn's vault
+    // redeem in Yearn's vault or Lido's Staking Pool
     function redeem(
         uint256 shares,
         address receiver,
-        uint256 maxLoss
-    ) external returns (uint256);
-
-    // redeem in Lido
-    function redeem(
-        uint256 shares,
-        address receiver,
-        uint256 amountOutMin,
-        address[] calldata path,
-        uint256 deadline
+        uint256 maxLoss // NOTE: Could be `minAmount` when calling in Lido's pool
     ) external returns (uint256);
 }

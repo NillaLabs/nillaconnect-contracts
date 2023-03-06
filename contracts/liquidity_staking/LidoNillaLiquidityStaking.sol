@@ -8,28 +8,25 @@ import "OpenZeppelin/openzeppelin-contracts@4.7.3/contracts/utils/math/Math.sol"
 
 import "../BaseNillaEarn.sol";
 
-import "../../interfaces/ILido.sol";
-import "../../interfaces/IWNative.sol";
-import "../../interfaces/IUniswapRouterV2.sol";
+import "../../interfaces/IstETH.sol";
+import "../../interfaces/ICurvePool.sol";
 
 contract LidoNillaLiquidityStaking is BaseNillaEarn {
     using SafeERC20 for IERC20;
     using Math for uint256;
 
-    ILido public lido;
-    IWNative public WETH;
-    IUniswapRouterV2 public swapRouter;
+    IstETH public stETH;
+    ICurvePool public swapRouter;
     
     IERC20 public baseToken;
-    uint8 private constant _decimals = 18; // stETH's decimals is 18
+    uint8 private _decimals;
 
     event Deposit(address indexed depositor, address indexed receiver, uint256 amount);
     event Withdraw(address indexed withdrawer, address indexed receiver, uint256 amount);
 
     function initialize(
-        address _lido,
+        address _stETH,
         address _swapRouter,
-        address _weth,
         string memory _name,
         string memory _symbol,
         uint16 _depositFeeBPS,
@@ -38,12 +35,11 @@ contract LidoNillaLiquidityStaking is BaseNillaEarn {
         address _bridge
     ) external {
         __initialize__(_name, _symbol, _depositFeeBPS, _withdrawFeeBPS, _executor, _bridge);
-        lido = ILido(_lido);
-        swapRouter = IUniswapRouterV2(_swapRouter);
-        baseToken = IERC20(_lido);
-        WETH = IWNative(_weth);
-        IERC20(_weth).safeApprove(_swapRouter, type(uint256).max);
-        IERC20(_lido).safeApprove(_swapRouter, type(uint256).max);
+        stETH = IstETH(_stETH);
+        swapRouter = ICurvePool(_swapRouter);
+        baseToken = IERC20(_stETH);
+        IERC20(_stETH).safeApprove(_swapRouter, type(uint256).max);
+        _decimals = IstETH(_stETH).decimals();
     }
 
     function decimals() public view virtual override returns (uint8) {
@@ -52,52 +48,51 @@ contract LidoNillaLiquidityStaking is BaseNillaEarn {
 
     function deposit(address _receiver) external payable nonReentrant returns (uint256) {
         // gas saving
-        ILido _lido = lido;
-        // submit to Lido Finance.
-        uint256 baseBefore = _lido.balanceOf(address(this));
-        _lido.submit{value: msg.value}(address(this));
-        uint256 receivedBase = _lido.balanceOf(address(this)) - baseBefore;
+        IstETH _stETH = stETH;
+        // submit to stETH Finance.
+        uint256 sharesBefore = _stETH.sharesOf(address(this));
+        _stETH.submit{value: msg.value}(address(this));
+        uint256 receivedShares = _stETH.sharesOf(address(this)) - sharesBefore;
         // collect protocol's fee.
-        uint256 depositFee = (receivedBase * depositFeeBPS) / BPS;
-        reserves[address(_lido)] += depositFee;
-        _mint(_receiver, receivedBase - depositFee);
+        uint256 depositFee = (receivedShares * depositFeeBPS) / BPS;
+        reserves[address(_stETH)] += depositFee;
+        _mint(_receiver, receivedShares - depositFee);
         emit Deposit(msg.sender, _receiver, msg.value);
-        return (receivedBase - depositFee);
+        return (receivedShares - depositFee);
     }
 
-    function redeem(uint256 _shares, address _receiver, uint256 _amountOutMin, uint256 _deadline) external nonReentrant returns (uint256) {
+    function redeem(uint256 _shares, address _receiver, uint256 minAmount) external nonReentrant returns (uint256) {
         // gas saving
-        IWNative _WETH = WETH;
-        ILido _lido = lido;
+        IstETH _stETH = stETH;
         // set msgSender for cross chain tx
         address msgSender = _msgSender(_receiver);
         // burn user's shares
         _burn(msgSender, _shares);
         // collect protocol's fee
         uint256 withdrawFee = (_shares * withdrawFeeBPS) / BPS;
-        reserves[address(lido)] += withdrawFee;
-        // convert shares to amount
-        uint256 amount = _shares.mulDiv(_lido.totalSupply(), _lido.getTotalShares());
-        // swap user's fund
-        address[] memory path = new address[](2);
-        path[0] = address(lido);
-        path[1] = address(WETH);
-        uint256 WETHBefore = IERC20(_WETH).balanceOf(address(this));
-        swapRouter.swapExactTokensForTokens(amount, _amountOutMin, path, address(this), _deadline);
-        uint256 receivedWETH = IERC20(_WETH).balanceOf(address(this)) - WETHBefore;
+        reserves[address(stETH)] += withdrawFee;
+        // convert nilla's shares to stETH amount
+        uint256 amount = _stETH.getPooledEthByShares(_shares - withdrawFee);
+        // swap user's fund via Curve; stETH --> ETH
+        uint256 ETHBefore = address(this).balance;
+        swapRouter.exchange{value: 0}(
+            1, // stETH
+            0, // ETH
+            amount,
+            minAmount
+        );
+        uint256 receivedETH = address(this).balance - ETHBefore;
         // bridge token back if cross chain tx.
         if (msg.sender == executor) {
-            _bridgeTokenBack(_receiver, receivedWETH);
-            emit Withdraw(msg.sender, bridge, receivedWETH);
+            _bridgeTokenBack(_receiver, receivedETH);
+            emit Withdraw(msg.sender, bridge, receivedETH);
         }
         // else transfer fund to user.
         else {
-            // unwrap WETH
-            _WETH.withdraw(receivedWETH);
-            (bool success, ) = payable(_receiver).call{ value: receivedWETH}("");
+            (bool success, ) = payable(_receiver).call{ value: receivedETH}("");
             require(success, "!withdraw");
-            emit Withdraw(msg.sender, _receiver, receivedWETH);
+            emit Withdraw(msg.sender, _receiver, receivedETH);
         }
-        return receivedWETH;
+        return receivedETH;
     }
 }

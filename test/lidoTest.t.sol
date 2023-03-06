@@ -8,7 +8,8 @@ import "../contracts/ProxyAdminImpl.sol";
 import "../contracts/TransparentUpgradeableProxyImplNative.sol";
 import "../contracts/liquidity_staking/LidoNillaLiquidityStaking.sol";
 
-import "../interfaces/ILido.sol";
+import "../interfaces/IstETH.sol";
+import "../interfaces/ICurvePool.sol";
 
 contract LidoTest is Test {
     using SafeERC20 for IERC20;
@@ -23,9 +24,8 @@ contract LidoTest is Test {
     uint256 public mainnetFork;
 
     IERC20 public baseToken;
-    IWNative public WETH = IWNative(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
-    ILido public lido = ILido(0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84);
-    IUniswapRouterV2 swapRouter = IUniswapRouterV2(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
+    IstETH public lido = IstETH(0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84);
+    ICurvePool swapRouter = ICurvePool(0xDC24316b9AE028F1497c275EB9192a3Ea0f67022);
 
     LidoNillaLiquidityStaking public nilla;
 
@@ -44,14 +44,13 @@ contract LidoTest is Test {
                 LidoNillaLiquidityStaking.initialize.selector,
                 address(lido),
                 address(swapRouter),
-                address(WETH),
                 "ETH Staking",
                 "ETH",
                 1,
                 1,
                 executor,
                 address(0)),
-            address(WETH)
+            address(swapRouter)
         );
 
         nilla = LidoNillaLiquidityStaking(payable(address(proxy)));
@@ -60,6 +59,7 @@ contract LidoTest is Test {
 
         vm.label(address(nilla), "#### Nilla ####");
         vm.label(address(baseToken), "#### Lido / stETH ####");
+        vm.label(address(swapRouter), "#### Curve Pool ####");
     }
 
     function testDeposit() public {
@@ -116,20 +116,20 @@ contract LidoTest is Test {
     function testRedeemNormal() public {
         uint256 amount = 1e19;
         nilla.deposit{value: amount}(user);
+        console.log("Total supply:", nilla.totalSupply());
 
         vm.warp(block.timestamp + 1_000_000);
 
         uint256 shares = nilla.balanceOf(user);  // Redeem total shares
-
         uint256 withdrawFee = shares * 1 / 10_000;
         uint256 reserveBefore = nilla.reserves(address(lido));
         
         uint256 balanceB = user.balance;
-        uint256 amountOutMin = 1e10;
-        address[] memory path = new address[](2);
-        path[0] = address(lido);
-        path[1] = address(WETH);
-        uint256 receivedETH = nilla.redeem(shares, user, amountOutMin, path, block.timestamp);
+        uint256 amountOutMin = 1e18;
+
+        console.log("stETH Bal B:", lido.balanceOf(address(nilla)));
+        uint256 receivedETH = nilla.redeem(shares, user, amountOutMin);
+        console.log("stETH Bal A:", lido.balanceOf(address(nilla)));
         
         uint256 balanceA = user.balance;
         uint256 reserveAfter = nilla.reserves(address(lido));
