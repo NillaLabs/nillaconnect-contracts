@@ -17,7 +17,7 @@ contract LidoNillaLiquidityStaking is BaseNillaEarn {
 
     IstETH public stETH;
     ICurvePool public swapRouter;
-    
+
     IERC20 public baseToken;
     uint8 private _decimals;
 
