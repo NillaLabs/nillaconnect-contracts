@@ -26,8 +26,8 @@ contract AaveV2NillaLendingPool is BaseNillaEarn {
     event Withdraw(address indexed withdrawer, address indexed receiver, uint256 amount);
 
     function initialize(
-        IAaveV2LendingPool _lendingPool,
-        IAToken _aToken,
+        address _lendingPool,
+        address _aToken,
         string memory _name,
         string memory _symbol,
         uint16 _depositFeeBPS,
@@ -36,12 +36,12 @@ contract AaveV2NillaLendingPool is BaseNillaEarn {
         address _bridge
     ) external {
         __initialize__(_name, _symbol, _depositFeeBPS, _withdrawFeeBPS, _executor, _bridge);
-        lendingPool = _lendingPool;
-        aToken = _aToken;
-        IERC20 _baseToken = IERC20(_aToken.underlyingAssetAddress());
+        lendingPool = IAaveV2LendingPool(_lendingPool);
+        aToken = IAToken(_aToken);
+        IERC20 _baseToken = IERC20(IAToken(_aToken).underlyingAssetAddress());
         baseToken = _baseToken;
-        _baseToken.safeApprove(address(_lendingPool), type(uint256).max);
-        _decimals = _aToken.decimals();
+        _baseToken.safeApprove(_lendingPool, type(uint256).max);
+        _decimals = IAToken(_aToken).decimals();
     }
 
     function decimals() public view virtual override returns (uint8) {

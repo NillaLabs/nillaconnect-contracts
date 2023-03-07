@@ -12,8 +12,8 @@ contract NativeGateway {
     using SafeERC20 for IERC20;
     IWNative immutable wNative;
 
-    constructor(IWNative _wNative) {
-        wNative = _wNative;
+    constructor(address _wNative) {
+        wNative = IWNative(_wNative);
     }
 
     function deposit(address _lendingPool) external payable {
