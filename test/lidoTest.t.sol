@@ -65,39 +65,39 @@ contract LidoTest is Test {
     function testDeposit() public {
         uint256 amount = 1e19;
         
-        uint256 baseBefore = lido.balanceOf(address(nilla));
+        uint256 sharesBefore = lido.sharesOf(address(nilla));
         uint256 reserveBefore = nilla.reserves(address(lido));
 
         nilla.deposit{value: amount}(user);
 
         uint256 reserveAfter = nilla.reserves(address(lido));
-        uint256 baseAfter = lido.balanceOf(address(nilla));
-        uint256 depositFee = (baseAfter - baseBefore) * 1 / 10_000;
+        uint256 sharesAfter = lido.sharesOf(address(nilla));
+        uint256 depositFee = (sharesAfter - sharesBefore) * 1 / 10_000;
 
         assertEq(reserveAfter - reserveBefore, depositFee);
-        assertEq(nilla.balanceOf(user), baseAfter - depositFee);
+        assertEq(nilla.balanceOf(user), sharesAfter - depositFee);
 
-        // console.log("Base B:", baseBefore);
-        // console.log("Base A:", baseAfter);
+        // console.log("Base B:", sharesBefore);
+        // console.log("Base A:", sharesAfter);
         // console.log("Reserve B:", reserveBefore);
         // console.log("Reserve A:", reserveAfter);
         // console.log("Deposit Fee:", depositFee);
     }
 
     function testFuzzyDeposit(uint256 amount) public {
-        amount = bound(amount, 1e15, 1e20);
+        amount = bound(amount, 1e15, 1e22);
 
-        uint256 baseBefore = lido.balanceOf(address(nilla));
+        uint256 sharesBefore = lido.sharesOf(address(nilla));
         uint256 reserveBefore = nilla.reserves(address(lido));
 
         nilla.deposit{value: amount}(user);
 
         uint256 reserveAfter = nilla.reserves(address(lido));
-        uint256 baseAfter = lido.balanceOf(address(nilla));
-        uint256 depositFee = (baseAfter - baseBefore) * 1 / 10_000;
+        uint256 sharesAfter = lido.sharesOf(address(nilla));
+        uint256 depositFee = (sharesAfter - sharesBefore) * 1 / 10_000;
 
         assertEq(reserveAfter - reserveBefore, depositFee);
-        assertEq(nilla.balanceOf(user), baseAfter - depositFee);
+        assertEq(nilla.balanceOf(user), sharesAfter - depositFee);
     }
 
     function testDepositTooLarge() public {
