@@ -20,7 +20,7 @@ contract IronBankNillaLendingPool is BaseNillaEarn {
     event Withdraw(address indexed withdrawer, address indexed receiver, uint256 amount);
 
     function initialize(
-        ICToken _cToken,
+        address _cToken,
         string memory _name,
         string memory _symbol,
         uint16 _depositFeeBPS,
@@ -29,11 +29,11 @@ contract IronBankNillaLendingPool is BaseNillaEarn {
         address _bridge
     ) external {
         __initialize__(_name, _symbol, _depositFeeBPS, _withdrawFeeBPS, _executor, _bridge);
-        cToken = _cToken;
-        IERC20 _baseToken = IERC20(_cToken.underlying());
+        cToken = ICToken(_cToken);
+        IERC20 _baseToken = IERC20(ICToken(_cToken).underlying());
         baseToken = _baseToken;
-        _baseToken.safeApprove(address(_cToken), type(uint256).max);
-        _decimals = _cToken.decimals();
+        _baseToken.safeApprove(_cToken, type(uint256).max);
+        _decimals = ICToken(_cToken).decimals();
     }
 
     function decimals() public view virtual override returns (uint8) {
