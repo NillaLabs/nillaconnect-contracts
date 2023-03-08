@@ -30,11 +30,9 @@ contract LidoNillaLiquidityStaking is BaseNillaEarn {
         string memory _name,
         string memory _symbol,
         uint16 _depositFeeBPS,
-        uint16 _withdrawFeeBPS,
-        address _executor,
-        address _bridge
+        uint16 _withdrawFeeBPS
     ) external {
-        __initialize__(_name, _symbol, _depositFeeBPS, _withdrawFeeBPS, _executor, _bridge);
+        __initialize__(_name, _symbol, _depositFeeBPS, _withdrawFeeBPS);
         stETH = IstETH(_stETH);
         swapRouter = ICurvePool(_swapRouter);
         IERC20 _baseToken = IERC20(_stETH);
@@ -65,10 +63,8 @@ contract LidoNillaLiquidityStaking is BaseNillaEarn {
     function redeem(uint256 _shares, address _receiver, uint256 minAmount) external nonReentrant returns (uint256) {
         // gas saving
         IstETH _stETH = stETH;
-        // set msgSender for cross chain tx
-        address msgSender = _msgSender(_receiver);
         // burn user's shares
-        _burn(msgSender, _shares);
+        _burn(_receiver, _shares);
         // collect protocol's fee
         uint256 withdrawFee = (_shares * withdrawFeeBPS) / BPS;
         reserves[address(stETH)] += withdrawFee;
@@ -83,17 +79,9 @@ contract LidoNillaLiquidityStaking is BaseNillaEarn {
             minAmount
         );
         uint256 receivedETH = address(this).balance - ETHBefore;
-        // bridge token back if cross chain tx.
-        if (msg.sender == executor) {
-            _bridgeTokenBack(_receiver, receivedETH);
-            emit Withdraw(msg.sender, bridge, receivedETH);
-        }
-        // else transfer fund to user.
-        else {
-            (bool success, ) = payable(_receiver).call{ value: receivedETH}("");
-            require(success, "!withdraw");
-            emit Withdraw(msg.sender, _receiver, receivedETH);
-        }
+        (bool success, ) = payable(_receiver).call{ value: receivedETH}("");
+        require(success, "!withdraw");
+        emit Withdraw(msg.sender, _receiver, receivedETH);
         return receivedETH;
     }
 }

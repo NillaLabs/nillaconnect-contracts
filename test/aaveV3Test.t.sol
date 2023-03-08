@@ -233,7 +233,7 @@ contract AaveV3Test is Test {
         deal(address(baseToken), user, amount);
         aaveV3Pool.deposit(amount, user);
 
-        vm.expectRevert(bytes("ERC20: transfer to the zero address"));
+        vm.expectRevert(bytes("ERC20: burn from the zero address"));
         aaveV3Pool.redeem(10_000, address(0));
     }
 

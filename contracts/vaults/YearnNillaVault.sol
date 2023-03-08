@@ -30,11 +30,9 @@ contract YearnNillaVault is BaseNillaEarn {
         string memory _name,
         string memory _symbol,
         uint16 _depositFeeBPS,
-        uint16 _withdrawFeeBPS,
-        address _executor,
-        address _bridge
+        uint16 _withdrawFeeBPS
     ) external {
-        __initialize__(_name, _symbol, _depositFeeBPS, _withdrawFeeBPS, _executor, _bridge);
+        __initialize__(_name, _symbol, _depositFeeBPS, _withdrawFeeBPS);
         yvToken = IYVToken(_yvToken);
         yearnPartnerTracker = IYearnPartnerTracker(_yearnPartnerTracker);
 
@@ -83,29 +81,16 @@ contract YearnNillaVault is BaseNillaEarn {
         // gas saving
         IERC20 _baseToken = baseToken;
         IYVToken _yvToken = yvToken;
-        // set msgSender for cross chain tx.
-        address msgSender = _msgSender(_receiver);
         // burn user's shares
-        _burn(msgSender, _shares);
-
+        _burn(_receiver, _shares);
+        // collect protocol's fee
         uint256 withdrawFee = (_shares * withdrawFeeBPS) / BPS;
         reserves[address(_yvToken)] += withdrawFee;
-
         uint256 baseTokenBefore = _baseToken.balanceOf(address(this));
         // withdraw user's fund.
-        _yvToken.withdraw(_shares - withdrawFee,  msg.sender == executor ? address(this) : _receiver, _maxLoss);
+        _yvToken.withdraw(_shares - withdrawFee,  _receiver, _maxLoss);
         uint256 receivedBaseToken = _baseToken.balanceOf(address(this)) - baseTokenBefore;
-        
-        // bridge token back if cross chain tx.
-        // NOTE: need to fix bridge token condition.
-        if (msg.sender == executor) {
-            _bridgeTokenBack(_receiver, receivedBaseToken);
-            emit Withdraw(msg.sender, bridge, receivedBaseToken, _maxLoss);
-        }
-        else { 
-            // NOTE: if not need, del _maxLoss later
-            emit Withdraw(msg.sender, _receiver, receivedBaseToken, _maxLoss);
-        }
+        emit Withdraw(msg.sender, _receiver, receivedBaseToken, _maxLoss);
         return receivedBaseToken;
     }
 }

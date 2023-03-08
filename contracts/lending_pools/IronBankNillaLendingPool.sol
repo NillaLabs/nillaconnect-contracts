@@ -24,11 +24,9 @@ contract IronBankNillaLendingPool is BaseNillaEarn {
         string memory _name,
         string memory _symbol,
         uint16 _depositFeeBPS,
-        uint16 _withdrawFeeBPS,
-        address _executor,
-        address _bridge
+        uint16 _withdrawFeeBPS
     ) external {
-        __initialize__(_name, _symbol, _depositFeeBPS, _withdrawFeeBPS, _executor, _bridge);
+        __initialize__(_name, _symbol, _depositFeeBPS, _withdrawFeeBPS);
         cToken = ICToken(_cToken);
         IERC20 _baseToken = IERC20(ICToken(_cToken).underlying());
         baseToken = _baseToken;
@@ -64,10 +62,8 @@ contract IronBankNillaLendingPool is BaseNillaEarn {
         // gas saving
         IERC20 _baseToken = baseToken;
         ICToken _cToken = cToken;
-        // set msgSender for cross chain tx.
-        address msgSender = _msgSender(_receiver);
         // burn user's shares
-        _burn(msgSender, _shares);
+        _burn(_receiver, _shares);
         // collect protocol's fee.
         uint256 withdrawFee = (_shares * withdrawFeeBPS) / BPS;
         reserves[address(_cToken)] += withdrawFee;
@@ -75,16 +71,8 @@ contract IronBankNillaLendingPool is BaseNillaEarn {
         uint256 baseTokenBefore = _baseToken.balanceOf(address(this));
         require(_cToken.redeem(_shares - withdrawFee) == 0, "!redeem");
         uint256 receivedBaseToken = _baseToken.balanceOf(address(this)) - baseTokenBefore;
-        // bridge token back if cross chain tx.
-        if (msg.sender == executor) {
-            _bridgeTokenBack(_receiver, receivedBaseToken);
-            emit Withdraw(msg.sender, bridge, receivedBaseToken);
-        }
-        // else transfer fund to user.
-        else {
-            _baseToken.safeTransfer(_receiver, receivedBaseToken);
-            emit Withdraw(msg.sender, _receiver, receivedBaseToken);
-        }
+        _baseToken.safeTransfer(_receiver, receivedBaseToken);
+        emit Withdraw(msg.sender, _receiver, receivedBaseToken);
         return receivedBaseToken;
     }
 }

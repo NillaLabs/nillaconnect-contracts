@@ -48,11 +48,9 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
         address _swapRouter,
         string calldata _name,
         string calldata _symbol,
-        ProtocolFee calldata _protocolFee,
-        address _executor,
-        address _bridge
+        ProtocolFee calldata _protocolFee
     ) external {
-        __initialize__(_name, _symbol, _protocolFee.depositFeeBPS, _protocolFee.withdrawFeeBPS, _executor, _bridge);
+        __initialize__(_name, _symbol, _protocolFee.depositFeeBPS, _protocolFee.withdrawFeeBPS);
         WETH = IWNative(_weth);
         harvestFeeBPS = _protocolFee.harvestFeeBPS;
         swapRouter = IUniswapRouterV2(_swapRouter);
@@ -97,12 +95,8 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
         IAaveV3LendingPool _lendingPool = lendingPool;
         address _baseToken = address(baseToken);
         IATokenV3 _aToken = aToken;
-        {
-            // set msgSender for cross chain tx.
-            address msgSender = _msgSender(_receiver);
-            // burn user's shares
-            _burn(msgSender, _shares);
-        }
+        // burn user's shares
+        _burn(_receiver, _shares);
         // collect protocol's fee.
         uint256 withdrawFee = _shares.mulDiv(withdrawFeeBPS, BPS);
         uint256 shareAfterFee = _shares - withdrawFee;
@@ -115,7 +109,7 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
                 RAY,
                 Math.Rounding.Down
             ), // aToken amount rounding down
-            msg.sender == executor ? address(this) : _receiver
+            _receiver
         );
         {
             uint256 burnedATokenShare = aTokenShareBefore - _aToken.scaledBalanceOf(address(this));
@@ -123,13 +117,7 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
             uint256 dust = shareAfterFee - burnedATokenShare;
             reserves[address(aToken)] += (withdrawFee + dust);
         }
-        // bridge token back if cross chain tx.
-        if (msg.sender == executor) {
-            _bridgeTokenBack(_receiver, receivedBaseToken);
-            emit Withdraw(msg.sender, bridge, receivedBaseToken);
-        }
-        // else transfer fund to user.
-        else emit Withdraw(msg.sender, _receiver, receivedBaseToken);
+        emit Withdraw(msg.sender, _receiver, receivedBaseToken);
         return receivedBaseToken;
     }
 
