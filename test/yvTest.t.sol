@@ -1,4 +1,4 @@
-pragma solidity 0.8.17;
+pragma solidity ^0.8.17;
 
 import "forge-std/Test.sol";
 import "../contracts/ProxyAdminImpl.sol";
@@ -160,7 +160,7 @@ contract YVTest is Test {
         uint256 baseTokenBefore = _token.balanceOf(user);
 
         uint256 shares = vault.balanceOf(user);
-        vault.redeemWithMaxLoss(vault.balanceOf(user), user, maxLoss);
+        vault.redeem(vault.balanceOf(user), user, maxLoss);
         uint256 reservesAfterWithdraw = vault.reserves(address(yvToken));
         uint256 baseTokenAfter = _token.balanceOf(user);
         uint256 withdrawFee = shares * 3 / 10_000; // withdrawFeeBPS = 0.03% BPS 100%
@@ -193,7 +193,7 @@ contract YVTest is Test {
         uint256 baseTokenBefore = _token.balanceOf(user);
 
         uint256 shares = vault.balanceOf(user);
-        vault.redeemWithMaxLoss(vault.balanceOf(user), user, maxLoss);
+        vault.redeem(vault.balanceOf(user), user, maxLoss);
         uint256 reservesAfterWithdraw = vault.reserves(address(yvToken));
         uint256 baseTokenAfter = _token.balanceOf(user);
         uint256 withdrawFee = shares * 3 / 10_000; // withdrawFeeBPS = 0.03% BPS 100%
@@ -216,7 +216,7 @@ contract YVTest is Test {
         uint256 amount = 10_000;
         vault.deposit(amount, user);
         vm.expectRevert();
-        vault.redeemWithMaxLoss(shares * 2, user, maxLoss);
+        vault.redeem(shares * 2, user, maxLoss);
     }
 
     function testRedeemZeroShare() public {
@@ -226,7 +226,7 @@ contract YVTest is Test {
         vault.deposit(amount, user);
 
         vm.expectRevert();
-        vault.redeemWithMaxLoss(shares, user, maxLoss);
+        vault.redeem(shares, user, maxLoss);
     }
 
     function testRedeemExceedingMaxLoss() public {
@@ -236,7 +236,7 @@ contract YVTest is Test {
         vault.deposit(amount, user);
 
         vm.expectRevert();
-        vault.redeemWithMaxLoss(shares, user, maxLoss);
+        vault.redeem(shares, user, maxLoss);
     }
 
     function testRedeemZeroMaxLoss() public {
@@ -251,7 +251,7 @@ contract YVTest is Test {
         uint256 reservesAfterDeposit = vault.reserves(address(yvToken));
         uint256 baseTokenBefore = _token.balanceOf(user);
         uint256 shares = vault.balanceOf(user);
-        vault.redeemWithMaxLoss(vault.balanceOf(user), user, maxLoss);
+        vault.redeem(vault.balanceOf(user), user, maxLoss);
         uint256 reservesAfterWithdraw = vault.reserves(address(yvToken));
         uint256 baseTokenAfter = _token.balanceOf(user);
         uint256 withdrawFee = shares * 3 / 10_000; // withdrawFeeBPS = 0.03% BPS 100%

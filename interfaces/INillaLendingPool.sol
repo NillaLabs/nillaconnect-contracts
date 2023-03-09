@@ -6,22 +6,28 @@ import "OpenZeppelin/openzeppelin-contracts@4.7.3/contracts/token/ERC20/IERC20.s
 
 interface INillaLendingPool is IERC20 {
     function decimals() external view returns (uint8);
-
-    function baseToken() external view returns (address);
+    function baseToken() external view returns (IERC20);
 
     function deposit(
         uint256 amount,
         address receiver
     ) external returns (uint256);
 
+    // deposit in Lido or used when depositing ETH directly
+    // No need for the `amount` to be specified
+    function deposit(
+        address receiver
+    ) external payable returns (uint256);
+
     function redeem(
-        uint256 amount,
+        uint256 shares,
         address receiver
     ) external returns (uint256);
 
-    function redeemWithMaxLoss(
-        uint256 amount,
+    // redeem in Yearn's vault or Lido's Staking Pool
+    function redeem(
+        uint256 shares,
         address receiver,
-        uint256 maxLoss
+        uint256 maxLoss // NOTE: Could be `minAmount` when calling in Lido's pool
     ) external returns (uint256);
 }

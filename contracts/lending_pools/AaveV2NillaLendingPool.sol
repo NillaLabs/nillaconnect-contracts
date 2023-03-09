@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.17;
+pragma solidity ^0.8.17;
 
 import "OpenZeppelin/openzeppelin-contracts@4.7.3/contracts/token/ERC20/IERC20.sol";
 import "OpenZeppelin/openzeppelin-contracts@4.7.3/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -26,22 +26,20 @@ contract AaveV2NillaLendingPool is BaseNillaEarn {
     event Withdraw(address indexed withdrawer, address indexed receiver, uint256 amount);
 
     function initialize(
-        IAaveV2LendingPool _lendingPool,
-        IAToken _aToken,
+        address _lendingPool,
+        address _aToken,
         string memory _name,
         string memory _symbol,
         uint16 _depositFeeBPS,
-        uint16 _withdrawFeeBPS,
-        address _executor,
-        address _bridge
+        uint16 _withdrawFeeBPS
     ) external {
-        __initialize__(_name, _symbol, _depositFeeBPS, _withdrawFeeBPS, _executor, _bridge);
-        lendingPool = _lendingPool;
-        aToken = _aToken;
-        IERC20 _baseToken = IERC20(_aToken.underlyingAssetAddress());
+        __initialize__(_name, _symbol, _depositFeeBPS, _withdrawFeeBPS);
+        lendingPool = IAaveV2LendingPool(_lendingPool);
+        aToken = IAToken(_aToken);
+        IERC20 _baseToken = IERC20(IAToken(_aToken).underlyingAssetAddress());
         baseToken = _baseToken;
-        _baseToken.safeApprove(address(_lendingPool), type(uint256).max);
-        _decimals = _aToken.decimals();
+        _baseToken.safeApprove(_lendingPool, type(uint256).max);
+        _decimals = IAToken(_aToken).decimals();
     }
 
     function decimals() public view virtual override returns (uint8) {
@@ -74,10 +72,8 @@ contract AaveV2NillaLendingPool is BaseNillaEarn {
         IAaveV2LendingPool _lendingPool = lendingPool;
         address _baseToken = address(baseToken);
         IAToken _aToken = aToken;
-        // set msgSender for cross chain tx.
-        address msgSender = _msgSender(_receiver);
         // burn user's shares
-        _burn(msgSender, _shares);
+        _burn(_receiver, _shares);
         // collect protocol's fee.
         uint256 withdrawFee = (_shares * withdrawFeeBPS) / BPS;
         uint256 shareAfterFee = _shares - withdrawFee;
@@ -90,19 +86,13 @@ contract AaveV2NillaLendingPool is BaseNillaEarn {
                 RAY,
                 Math.Rounding.Down
             ), // aToken amount rounding down
-            msg.sender == executor ? address(this) : _receiver
+            _receiver
         );
         uint256 burnedATokenShare = _aToken.scaledBalanceOf(address(this)) - aTokenShareBefore;
         // dust after burn rounding.
         uint256 dust = shareAfterFee - burnedATokenShare;
         reserves[address(aToken)] += (withdrawFee + dust);
-        // bridge token back if cross chain tx.
-        if (msg.sender == executor) {
-            _bridgeTokenBack(_receiver, receivedBaseToken);
-            emit Withdraw(msg.sender, bridge, receivedBaseToken);
-        }
-        // else transfer fund to user.
-        else emit Withdraw(msg.sender, _receiver, receivedBaseToken);
+        emit Withdraw(msg.sender, _receiver, receivedBaseToken);
         return receivedBaseToken;
     }
 

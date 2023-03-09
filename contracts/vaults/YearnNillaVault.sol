@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.17;
+pragma solidity ^0.8.17;
 
 import "OpenZeppelin/openzeppelin-contracts@4.7.3/contracts/token/ERC20/IERC20.sol";
 import "OpenZeppelin/openzeppelin-contracts@4.7.3/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -30,11 +30,9 @@ contract YearnNillaVault is BaseNillaEarn {
         string memory _name,
         string memory _symbol,
         uint16 _depositFeeBPS,
-        uint16 _withdrawFeeBPS,
-        address _executor,
-        address _bridge
+        uint16 _withdrawFeeBPS
     ) external {
-        __initialize__(_name, _symbol, _depositFeeBPS, _withdrawFeeBPS, _executor, _bridge);
+        __initialize__(_name, _symbol, _depositFeeBPS, _withdrawFeeBPS);
         yvToken = IYVToken(_yvToken);
         yearnPartnerTracker = IYearnPartnerTracker(_yearnPartnerTracker);
 
@@ -67,7 +65,9 @@ contract YearnNillaVault is BaseNillaEarn {
         uint256 receivedBaseToken = _baseToken.balanceOf(address(this)) - baseTokenBefore;
 
         // deposit to yearn.
-        uint256 receivedYVToken = yearnPartnerTracker.deposit(address(_yvToken), PARTNER_ADDRESS, receivedBaseToken);
+        uint256 yvBefore = _yvToken.balanceOf(address(this));
+        yearnPartnerTracker.deposit(address(_yvToken), PARTNER_ADDRESS, receivedBaseToken);
+        uint256 receivedYVToken = _yvToken.balanceOf(address(this)) - yvBefore;
 
         // collect protocol's fee.
         uint256 depositFee = (receivedYVToken * depositFeeBPS) / BPS;
@@ -77,33 +77,20 @@ contract YearnNillaVault is BaseNillaEarn {
         return receivedYVToken - depositFee;
     }
 
-    function redeemWithMaxLoss(uint256 _shares, address _receiver, uint256 _maxLoss) external nonReentrant returns (uint256) {
+    function redeem(uint256 _shares, address _receiver, uint256 _maxLoss) external nonReentrant returns (uint256) {
         // gas saving
         IERC20 _baseToken = baseToken;
         IYVToken _yvToken = yvToken;
-        // set msgSender for cross chain tx.
-        address msgSender = _msgSender(_receiver);
         // burn user's shares
-        _burn(msgSender, _shares);
-
+        _burn(_receiver, _shares);
+        // collect protocol's fee
         uint256 withdrawFee = (_shares * withdrawFeeBPS) / BPS;
         reserves[address(_yvToken)] += withdrawFee;
-
         uint256 baseTokenBefore = _baseToken.balanceOf(address(this));
         // withdraw user's fund.
-        _yvToken.withdraw(_shares - withdrawFee,  msg.sender == executor ? address(this) : _receiver, _maxLoss);
+        _yvToken.withdraw(_shares - withdrawFee,  _receiver, _maxLoss);
         uint256 receivedBaseToken = _baseToken.balanceOf(address(this)) - baseTokenBefore;
-        
-        // bridge token back if cross chain tx.
-        // NOTE: need to fix bridge token condition.
-        if (msg.sender == executor) {
-            _bridgeTokenBack(_receiver, receivedBaseToken);
-            emit Withdraw(msg.sender, bridge, receivedBaseToken, _maxLoss);
-        }
-        else { 
-            // NOTE: if not need, del _maxLoss later
-            emit Withdraw(msg.sender, _receiver, receivedBaseToken, _maxLoss);
-        }
+        emit Withdraw(msg.sender, _receiver, receivedBaseToken, _maxLoss);
         return receivedBaseToken;
     }
 }

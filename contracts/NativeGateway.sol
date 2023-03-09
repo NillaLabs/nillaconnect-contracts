@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.17;
+pragma solidity ^0.8.17;
 
 import "OpenZeppelin/openzeppelin-contracts@4.7.3/contracts/token/ERC20/IERC20.sol";
 import "OpenZeppelin/openzeppelin-contracts@4.7.3/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -12,8 +12,8 @@ contract NativeGateway {
     using SafeERC20 for IERC20;
     IWNative immutable wNative;
 
-    constructor(IWNative _wNative) {
-        wNative = _wNative;
+    constructor(address _wNative) {
+        wNative = IWNative(_wNative);
     }
 
     function deposit(address _lendingPool) external payable {
