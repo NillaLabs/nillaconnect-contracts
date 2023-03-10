@@ -54,8 +54,6 @@ contract LidoTest is Test {
         );
 
         nilla = LidoNillaLiquidityStaking(payable(address(proxy)));
-        baseToken = nilla.baseToken();
-        baseToken.safeApprove(address(nilla), type(uint256).max);
 
         vm.label(address(nilla), "#### Nilla ####");
         vm.label(address(baseToken), "#### Lido / stETH ####");

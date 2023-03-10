@@ -18,7 +18,7 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
     using SafeERC20 for IERC20;
     using Math for uint256;
 
-    IWNative public immutable WETH;
+    IWNative public immutable wNative;
 
     IUniswapRouterV2 swapRouter;
 
@@ -47,7 +47,7 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
     function initialize(
         address _aToken,
         address _rewardsController,
-        address _weth,
+        address _wNative,
         address _swapRouter,
         address _harvestBot,
         string calldata _name,
@@ -55,7 +55,7 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
         ProtocolFee calldata _protocolFee
     ) external {
         __initialize__(_name, _symbol, _protocolFee.depositFeeBPS, _protocolFee.withdrawFeeBPS);
-        WETH = IWNative(_weth);
+        wNative = IWNative(_wNative);
         harvestFeeBPS = _protocolFee.harvestFeeBPS;
         swapRouter = IUniswapRouterV2(_swapRouter);
 
@@ -66,7 +66,7 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
         baseToken = _baseToken;
         _baseToken.safeApprove(IATokenV3(_aToken).POOL(), type(uint256).max);
         // AaveV3 gives Native to lender as a Rewards in Avalanche Chain.
-        IERC20(_weth).safeApprove(_swapRouter, type(uint256).max);
+        IERC20(_wNative).safeApprove(_swapRouter, type(uint256).max);
         _decimals = IATokenV3(_aToken).decimals(); 
         HARVEST_BOT = _harvestBot; 
     }
@@ -75,9 +75,9 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
         return _decimals;
     }
 
-    function setBot(address newBot) external onlyOwner {
+    function setHarvestBot(address newBot) external onlyOwner {
         HARVEST_BOT = newBot;
-        emit setBot(newBot);
+        emit SetHarvestBot(newBot);
     }
     
     function deposit(uint256 _amount, address _receiver) external nonReentrant returns (uint256) {
@@ -152,9 +152,9 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
         require(_path[0] != address(aToken), "Asset to swap should not be aToken");
         // gas saving
         IATokenV3 _aToken = aToken;
-        IWNative _WETH = IWNative(WETH);
+        IWNative _wNative = IWNative(wNative);
         // claim rewards from rewardController
-        uint256 receivedWETH = _claimeRewards(_aToken, _WETH);
+        uint256 receivedWETH = _claimeRewards(_aToken, _wNative);
         require(receivedWETH > 0, "No rewards to harvest");
         // Calculate worker's fee before swapping
         uint256 workerFee = receivedWETH * harvestFeeBPS / BPS;
@@ -162,32 +162,29 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
         uint256 baseTokenBefore = baseToken.balanceOf(address(this));
         swapRouter.swapExactTokensForTokens(receivedWETH - workerFee, _amountOutMin, _path, address(this), _deadline);
         uint256 receivedBase = baseToken.balanceOf(address(this)) - baseTokenBefore;
-        _reinvest(_aToken, _WETH, workerFee, receivedBase); // alredy sub workerFee when swap()
+        _reinvest(_aToken, _wNative, workerFee, receivedBase); // alredy sub workerFee when swap()
     }
 
-    function _claimeRewards(IATokenV3 _aToken, IWNative _WETH) internal returns(uint256 receivedWAVAX) {
-        uint256 WAVAXBefore = _WETH.balanceOf(address(this));
+    // NOTE: internal function to avoid stack-too-deep
+    function _claimeRewards(IATokenV3 _aToken, IWNative _wNative) internal returns(uint256 receivedWAVAX) {
+        uint256 WAVAXBefore = _wNative.balanceOf(address(this));
         address[] memory assets = new address[](1);
         assets[0] = address(_aToken);
         // amount = MAX_UINT to claim all
-        rewardsController.claimRewards(assets, type(uint256).max, address(this), address(_WETH));
-        receivedWAVAX = _WETH.balanceOf(address(this)) - WAVAXBefore;
+        rewardsController.claimRewards(assets, type(uint256).max, address(this), address(_wNative));
+        receivedWAVAX = _wNative.balanceOf(address(this)) - WAVAXBefore;
     }
 
-    function _reinvest(IATokenV3 _aToken, IWNative _WETH, uint256 _workerFee, uint256 _amount) internal {
+    // NOTE: internal function to avoid stack-too-deep
+    function _reinvest(IATokenV3 _aToken, IWNative _wNative, uint256 _workerFee, uint256 _amount) internal {
         //gas saving
         uint256 protocolReserves = reserves[address(_aToken)];
         
-        _WETH.withdraw(_workerFee);
+        _wNative.withdraw(_workerFee);
         (bool _success, ) = payable(worker).call{value: _workerFee}("");
         require(_success, "Failed to send Ethers to worker");
         // re-supply into pool
-        uint256 aTokenBefore = _aToken.scaledBalanceOf(address(this));
         lendingPool.supply(address(baseToken), _amount, address(this), 0);
-        uint256 receivedAToken = _aToken.scaledBalanceOf(address(this)) - aTokenBefore;
-        // calculate protocol reward
-        uint256 protocolReward = protocolReserves.mulDiv(receivedAToken, (_aToken.scaledBalanceOf(address(this)) + protocolReserves));
-        reserves[address(_aToken)] += protocolReward;
         emit Reinvest(address(lendingPool), _amount);
     }
 }
