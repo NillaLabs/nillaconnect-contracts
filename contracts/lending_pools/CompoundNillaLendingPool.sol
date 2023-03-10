@@ -9,7 +9,7 @@ import "../BaseNillaEarn.sol";
 
 import "../../interfaces/ICToken.sol";
 
-contract IronBankNillaLendingPool is BaseNillaEarn {
+contract CompoundNillaLendingPool is BaseNillaEarn {
     using SafeERC20 for IERC20;
 
     ICToken public cToken;
@@ -46,7 +46,7 @@ contract IronBankNillaLendingPool is BaseNillaEarn {
         uint256 baseTokenBefore = _baseToken.balanceOf(address(this));
         _baseToken.safeTransferFrom(msg.sender, address(this), _amount);
         uint256 receivedBaseToken = _baseToken.balanceOf(address(this)) - baseTokenBefore;
-        // deposit to Iron Bank.
+        // deposit to Compound.
         uint256 cTokenBefore = _cToken.balanceOf(address(this));
         require(_cToken.mint(receivedBaseToken) == 0, "!mint");
         uint256 receivedCToken = _cToken.balanceOf(address(this)) - cTokenBefore;
