@@ -75,4 +75,12 @@ contract CompoundNillaLendingPool is BaseNillaEarn {
         emit Withdraw(msg.sender, _receiver, receivedBaseToken);
         return receivedBaseToken;
     }
+
+    /**
+     * Reinvest() on Mainnet
+     * rewards: compound token
+     * Comptroller.sol --> claimeReward() // around this name
+     * swap on either UniV2 or Sushi or UniV3 ; Check LQ.
+     * Follow the same logic as others reinvest(). :D
+     */
 }
