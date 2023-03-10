@@ -24,7 +24,6 @@ contract LidoNillaLiquidityStaking is BaseNillaEarn {
     event Withdraw(address indexed withdrawer, address indexed receiver, uint256 amount);
 
     function initialize(
-        address _stETH,
         address _swapRouter,
         string memory _name,
         string memory _symbol,
@@ -32,8 +31,11 @@ contract LidoNillaLiquidityStaking is BaseNillaEarn {
         uint16 _withdrawFeeBPS
     ) external {
         __initialize__(_name, _symbol, _depositFeeBPS, _withdrawFeeBPS);
-        stETH = IstETH(_stETH);
         swapRouter = ICurvePool(_swapRouter);
+    }
+
+    constructor(address _stETH) {
+        stETH = IstETH(_stETH);
         _decimals = IstETH(_stETH).decimals();
     }
 

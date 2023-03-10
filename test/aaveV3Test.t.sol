@@ -62,16 +62,17 @@ contract AaveV3Test is Test {
         protocolFee.withdrawFeeBPS = 1;
 
         admin = address(new ProxyAdminImpl());
-        impl  = address(new AaveV3NillaLendingPool());
+        impl  = address(new AaveV3NillaLendingPool(
+                            address(aToken),
+                            address(rewardsController),
+                            address(WETH)
+                        ));
 
         proxy = new TransparentUpgradeableProxyImplNative(
             impl,
             admin,
             abi.encodeWithSelector(
                 AaveV3NillaLendingPool.initialize.selector,
-                address(aToken),
-                address(rewardsController),
-                address(WETH),
                 address(swapRouter),
                 "USDC Vault",
                 "USDC",

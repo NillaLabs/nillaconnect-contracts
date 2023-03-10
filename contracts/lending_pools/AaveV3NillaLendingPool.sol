@@ -45,9 +45,6 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
     }
 
     function initialize(
-        address _aToken,
-        address _rewardsController,
-        address _wNative,
         address _swapRouter,
         address _harvestBot,
         string calldata _name,
@@ -55,10 +52,17 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
         ProtocolFee calldata _protocolFee
     ) external {
         __initialize__(_name, _symbol, _protocolFee.depositFeeBPS, _protocolFee.withdrawFeeBPS);
-        wNative = IWNative(_wNative);
         harvestFeeBPS = _protocolFee.harvestFeeBPS;
         swapRouter = IUniswapRouterV2(_swapRouter);
+        HARVEST_BOT = _harvestBot; 
+    }
 
+    constructor(
+        address _aToken,
+        address _rewardsController,
+        address _wNative
+    ) {
+        wNative = IWNative(_wNative);
         rewardsController = IRewardsController(_rewardsController);
         aToken = IATokenV3(_aToken);
         lendingPool = IAaveV3LendingPool(IATokenV3(_aToken).POOL());
@@ -66,9 +70,8 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
         baseToken = _baseToken;
         _baseToken.safeApprove(IATokenV3(_aToken).POOL(), type(uint256).max);
         // AaveV3 gives Native to lender as a Rewards in Avalanche Chain.
-        IERC20(_wNative).safeApprove(_swapRouter, type(uint256).max);
+        IERC20(_wNative).safeApprove(address(swapRouter), type(uint256).max);
         _decimals = IATokenV3(_aToken).decimals(); 
-        HARVEST_BOT = _harvestBot; 
     }
 
     function decimals() public view virtual override returns (uint8) {
@@ -162,7 +165,7 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
         uint256 baseTokenBefore = baseToken.balanceOf(address(this));
         swapRouter.swapExactTokensForTokens(receivedWETH - workerFee, _amountOutMin, _path, address(this), _deadline);
         uint256 receivedBase = baseToken.balanceOf(address(this)) - baseTokenBefore;
-        _reinvest(_aToken, _wNative, workerFee, receivedBase); // alredy sub workerFee when swap()
+        _reinvest(_wNative, workerFee, receivedBase); // alredy sub workerFee when swap()
     }
 
     // NOTE: internal function to avoid stack-too-deep
@@ -176,10 +179,7 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
     }
 
     // NOTE: internal function to avoid stack-too-deep
-    function _reinvest(IATokenV3 _aToken, IWNative _wNative, uint256 _workerFee, uint256 _amount) internal {
-        //gas saving
-        uint256 protocolReserves = reserves[address(_aToken)];
-        
+    function _reinvest(IWNative _wNative, uint256 _workerFee, uint256 _amount) internal {
         _wNative.withdraw(_workerFee);
         (bool _success, ) = payable(worker).call{value: _workerFee}("");
         require(_success, "Failed to send Ethers to worker");

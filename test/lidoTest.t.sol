@@ -35,14 +35,13 @@ contract LidoTest is Test {
         startHoax(user);
 
         admin = address(new ProxyAdminImpl());
-        impl  = address(new LidoNillaLiquidityStaking());
+        impl  = address(new LidoNillaLiquidityStaking(address(lido)));
 
         proxy = new TransparentUpgradeableProxyImplNative(
             impl,
             admin,
             abi.encodeWithSelector(
                 LidoNillaLiquidityStaking.initialize.selector,
-                address(lido),
                 address(swapRouter),
                 "ETH Staking",
                 "ETH",
