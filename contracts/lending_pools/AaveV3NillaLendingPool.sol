@@ -18,15 +18,15 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
     using SafeERC20 for IERC20;
     using Math for uint256;
 
-    IWNative public immutable wNative;
+    IWNative public immutable WNATIVE;
 
     IUniswapRouterV2 swapRouter;
 
     IATokenV3 public aToken;
     IERC20 public baseToken;
     uint8 internal _decimals;
-    IAaveV3LendingPool public immutable lendingPool;
-    IRewardsController public immutable rewardsController;
+    IAaveV3LendingPool public immutable POOL;
+    IRewardsController public immutable REWARDSCONTROLLER;
 
     uint16 public harvestFeeBPS;
     uint256 internal constant RAY = 1e27;
@@ -35,7 +35,7 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
 
     event Deposit(address indexed depositor, address indexed receiver, uint256 amount);
     event Withdraw(address indexed withdrawer, address indexed receiver, uint256 amount);
-    event Reinvest(address indexed lendingPool, uint256 amount);
+    event Reinvest(address indexed POOL, uint256 amount);
     event SetHarvestBot(address indexed newBot);
 
     struct ProtocolFee {
@@ -45,6 +45,7 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
     }
 
     function initialize(
+        address _aToken,
         address _swapRouter,
         address _harvestBot,
         string calldata _name,
@@ -52,26 +53,25 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
         ProtocolFee calldata _protocolFee
     ) external {
         __initialize__(_name, _symbol, _protocolFee.depositFeeBPS, _protocolFee.withdrawFeeBPS);
-        harvestFeeBPS = _protocolFee.harvestFeeBPS;
-        swapRouter = IUniswapRouterV2(_swapRouter);
-        HARVEST_BOT = _harvestBot; 
-    }
-
-    constructor(
-        address _aToken,
-        address _rewardsController,
-        address _wNative
-    ) {
-        wNative = IWNative(_wNative);
-        rewardsController = IRewardsController(_rewardsController);
         aToken = IATokenV3(_aToken);
-        lendingPool = IAaveV3LendingPool(IATokenV3(_aToken).POOL());
         IERC20 _baseToken = IERC20(IATokenV3(_aToken).UNDERLYING_ASSET_ADDRESS());
         baseToken = _baseToken;
         _baseToken.safeApprove(IATokenV3(_aToken).POOL(), type(uint256).max);
-        // AaveV3 gives Native to lender as a Rewards in Avalanche Chain.
-        IERC20(_wNative).safeApprove(address(swapRouter), type(uint256).max);
+        harvestFeeBPS = _protocolFee.harvestFeeBPS;
+        swapRouter = IUniswapRouterV2(_swapRouter);
         _decimals = IATokenV3(_aToken).decimals(); 
+        HARVEST_BOT = _harvestBot; 
+        // AaveV3 gives Native to lender as a Rewards in Avalanche Chain.
+        IERC20(WNATIVE).safeApprove(address(swapRouter), type(uint256).max);
+    }
+
+    constructor(
+        address _rewardsController,
+        address _wNative
+    ) {
+        WNATIVE = IWNative(_wNative);
+        REWARDSCONTROLLER = IRewardsController(_rewardsController);
+        POOL = IAaveV3LendingPool(aToken.POOL());      
     }
 
     function decimals() public view virtual override returns (uint8) {
@@ -93,7 +93,7 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
         uint256 receivedBaseToken = _baseToken.balanceOf(address(this)) - baseTokenBefore;
         // supply to Aave V3, using share instead.
         uint256 aTokenShareBefore = _aToken.scaledBalanceOf(address(this));
-        lendingPool.supply(address(_baseToken), receivedBaseToken, address(this), 0);
+        POOL.supply(address(_baseToken), receivedBaseToken, address(this), 0);
         uint256 receivedAToken = _aToken.scaledBalanceOf(address(this)) - aTokenShareBefore;
         // collect protocol's fee.
         uint256 depositFee = receivedAToken.mulDiv(depositFeeBPS, BPS);
@@ -105,7 +105,7 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
 
     function redeem(uint256 _shares, address _receiver) external nonReentrant returns (uint256) {
         // gas saving
-        IAaveV3LendingPool _lendingPool = lendingPool;
+        IAaveV3LendingPool _pool = POOL;
         address _baseToken = address(baseToken);
         IATokenV3 _aToken = aToken;
         // burn user's shares
@@ -115,10 +115,10 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
         uint256 shareAfterFee = _shares - withdrawFee;
         // withdraw user's fund.
         uint256 aTokenShareBefore = _aToken.scaledBalanceOf(address(this));
-        uint256 receivedBaseToken = _lendingPool.withdraw(
+        uint256 receivedBaseToken = _pool.withdraw(
             _baseToken,
             shareAfterFee.mulDiv(
-                _lendingPool.getReserveNormalizedIncome(_baseToken),
+                _pool.getReserveNormalizedIncome(_baseToken),
                 RAY,
                 Math.Rounding.Down
             ), // aToken amount rounding down
@@ -155,7 +155,7 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
         require(_path[0] != address(aToken), "Asset to swap should not be aToken");
         // gas saving
         IATokenV3 _aToken = aToken;
-        IWNative _wNative = IWNative(wNative);
+        IWNative _wNative = IWNative(WNATIVE);
         // claim rewards from rewardController
         uint256 receivedWETH = _claimeRewards(_aToken, _wNative);
         require(receivedWETH > 0, "No rewards to harvest");
@@ -174,7 +174,7 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
         address[] memory assets = new address[](1);
         assets[0] = address(_aToken);
         // amount = MAX_UINT to claim all
-        rewardsController.claimRewards(assets, type(uint256).max, address(this), address(_wNative));
+        REWARDSCONTROLLER.claimRewards(assets, type(uint256).max, address(this), address(_wNative));
         receivedWAVAX = _wNative.balanceOf(address(this)) - WAVAXBefore;
     }
 
@@ -184,7 +184,7 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
         (bool _success, ) = payable(worker).call{value: _workerFee}("");
         require(_success, "Failed to send Ethers to worker");
         // re-supply into pool
-        lendingPool.supply(address(baseToken), _amount, address(this), 0);
-        emit Reinvest(address(lendingPool), _amount);
+        POOL.supply(address(baseToken), _amount, address(this), 0);
+        emit Reinvest(address(POOL), _amount);
     }
 }

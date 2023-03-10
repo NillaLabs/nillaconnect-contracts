@@ -63,7 +63,6 @@ contract AaveV3Test is Test {
 
         admin = address(new ProxyAdminImpl());
         impl  = address(new AaveV3NillaLendingPool(
-                            address(aToken),
                             address(rewardsController),
                             address(WETH)
                         ));
@@ -73,6 +72,7 @@ contract AaveV3Test is Test {
             admin,
             abi.encodeWithSelector(
                 AaveV3NillaLendingPool.initialize.selector,
+                address(aToken),
                 address(swapRouter),
                 "USDC Vault",
                 "USDC",
