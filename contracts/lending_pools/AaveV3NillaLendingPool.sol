@@ -18,22 +18,25 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
     using SafeERC20 for IERC20;
     using Math for uint256;
 
-    IWNative public WETH;
+    IWNative public immutable WETH;
 
     IUniswapRouterV2 swapRouter;
 
     IATokenV3 public aToken;
     IERC20 public baseToken;
     uint8 internal _decimals;
-    IAaveV3LendingPool public lendingPool;
-    IRewardsController public rewardsController;
+    IAaveV3LendingPool public immutable lendingPool;
+    IRewardsController public immutable rewardsController;
 
     uint16 public harvestFeeBPS;
     uint256 internal constant RAY = 1e27;
 
+    address public HARVEST_BOT;
+
     event Deposit(address indexed depositor, address indexed receiver, uint256 amount);
     event Withdraw(address indexed withdrawer, address indexed receiver, uint256 amount);
     event Reinvest(address indexed lendingPool, uint256 amount);
+    event SetHarvestBot(address indexed newBot);
 
     struct ProtocolFee {
         uint16 depositFeeBPS;
@@ -46,6 +49,7 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
         address _rewardsController,
         address _weth,
         address _swapRouter,
+        address _harvestBot,
         string calldata _name,
         string calldata _symbol,
         ProtocolFee calldata _protocolFee
@@ -61,13 +65,19 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
         IERC20 _baseToken = IERC20(IATokenV3(_aToken).UNDERLYING_ASSET_ADDRESS());
         baseToken = _baseToken;
         _baseToken.safeApprove(IATokenV3(_aToken).POOL(), type(uint256).max);
+        // AaveV3 gives Native to lender as a Rewards in Avalanche Chain.
         IERC20(_weth).safeApprove(_swapRouter, type(uint256).max);
-
-        _decimals = IATokenV3(_aToken).decimals();  
+        _decimals = IATokenV3(_aToken).decimals(); 
+        HARVEST_BOT = _harvestBot; 
     }
 
     function decimals() public view virtual override returns (uint8) {
         return _decimals;
+    }
+
+    function setBot(address newBot) external onlyOwner {
+        HARVEST_BOT = newBot;
+        emit setBot(newBot);
     }
     
     function deposit(uint256 _amount, address _receiver) external nonReentrant returns (uint256) {
@@ -111,12 +121,10 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
             ), // aToken amount rounding down
             _receiver
         );
-        {
-            uint256 burnedATokenShare = aTokenShareBefore - _aToken.scaledBalanceOf(address(this));
-            // dust after burn rounding.
-            uint256 dust = shareAfterFee - burnedATokenShare;
-            reserves[address(aToken)] += (withdrawFee + dust);
-        }
+        uint256 burnedATokenShare = aTokenShareBefore - _aToken.scaledBalanceOf(address(this));
+        // dust after burn rounding.
+        uint256 dust = shareAfterFee - burnedATokenShare;
+        reserves[address(aToken)] += (withdrawFee + dust);
         emit Withdraw(msg.sender, _receiver, receivedBaseToken);
         return receivedBaseToken;
     }
@@ -132,15 +140,15 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
             // using shares for aToken
             uint256 aTokenShareBefore = _aToken.scaledBalanceOf(address(this));
             IERC20(_token).safeTransfer(msg.sender, _amount);
-            uint256 transferedATokenShare = _aToken.scaledBalanceOf(address(this)) - aTokenShareBefore;
+            uint256 transferedATokenShare = aTokenShareBefore - _aToken.scaledBalanceOf(address(this));
             reserves[_token] -= transferedATokenShare;
             emit WithdrawReserve(msg.sender, _token, transferedATokenShare);
         }
     }
     
     // Only available in Avalanche chain.
-    function reinvest(uint16 _amountOutMin, address[] calldata _path, uint256 _deadline) external {
-        require(msg.sender == worker, "only worker is allowed");
+    function reinvest(uint256 _amountOutMin, address[] calldata _path, uint256 _deadline) external {
+        require(msg.sender == HARVEST_BOT, "only harvest bot is allowed");
         require(_path[0] != address(aToken), "Asset to swap should not be aToken");
         // gas saving
         IATokenV3 _aToken = aToken;
