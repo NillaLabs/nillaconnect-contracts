@@ -16,8 +16,6 @@ contract YVTest is Test {
     address internal admin;
     address internal user = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266;
 
-    address internal executor = 0x70997970C51812dc3A010C7d01b50e0d17dc79C8;
-
     // zero-address
     address internal ZERO_ADDRESS = address(0);
     
@@ -50,12 +48,11 @@ contract YVTest is Test {
                 YearnNillaVault.initialize.selector,
                 yvToken,
                 yearnPartnerTracker,
-                "USDC Vault",
-                "USDC",
+                "Nilla-Yearn WETH Vault",
+                "WETH",
                 3,
-                3,
-                executor,
-                address(0))
+                3
+            )
         );
 
         vault = YearnNillaVault(address(proxy));

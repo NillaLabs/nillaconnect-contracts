@@ -22,8 +22,7 @@ contract AaveV3Test is Test {
     address public admin;
     address public rewarder = 0xA68eEB34418871d844a1301F97353cB20343B65d; // someone who has rewards on AAVE.
     address public user = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266;
-
-    address public executor = 0x70997970C51812dc3A010C7d01b50e0d17dc79C8;
+    address public bot = 0x70997970C51812dc3A010C7d01b50e0d17dc79C8;
 
     address public WETH = 0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7;
 
@@ -33,7 +32,7 @@ contract AaveV3Test is Test {
     uint256 public avalancheFork;
 
     IERC20 public baseToken;
-    IATokenV3 public aToken = IATokenV3(0x625E7708f30cA75bfd92586e17077590C60eb4cD);
+    IATokenV3 public aToken = IATokenV3(0x6ab707Aca953eDAeFBc4fD23bA73294241490620);
     IRewardsController rewardsController = IRewardsController(0x929EC64c34a17401F460460D4B9390518E5B473e);
     IUniswapRouterV2 swapRouter = IUniswapRouterV2(0x60aE616a2155Ee3d9A68541Ba4544862310933d4);
 
@@ -64,7 +63,8 @@ contract AaveV3Test is Test {
         admin = address(new ProxyAdminImpl());
         impl  = address(new AaveV3NillaLendingPool(
                             address(rewardsController),
-                            address(WETH)
+                            address(WETH),
+                            address(aToken)
                         ));
 
         proxy = new TransparentUpgradeableProxyImplNative(
@@ -74,11 +74,11 @@ contract AaveV3Test is Test {
                 AaveV3NillaLendingPool.initialize.selector,
                 address(aToken),
                 address(swapRouter),
-                "USDC Vault",
-                "USDC",
-                protocolFee,
-                executor,
-                address(0)),
+                bot,
+                "Nilla-AaveV3 USDT LP",
+                "nUSDT",
+                protocolFee
+            ),
             WETH
         );
         aaveV3Pool = AaveV3NillaLendingPool(payable(address(proxy)));

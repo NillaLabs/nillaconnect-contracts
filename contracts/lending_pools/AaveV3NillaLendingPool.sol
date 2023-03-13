@@ -67,11 +67,12 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
 
     constructor(
         address _rewardsController,
-        address _wNative
+        address _wNative,
+        address _aToken
     ) {
         WNATIVE = IWNative(_wNative);
         REWARDSCONTROLLER = IRewardsController(_rewardsController);
-        POOL = IAaveV3LendingPool(aToken.POOL());      
+        POOL = IAaveV3LendingPool(IATokenV3(_aToken).POOL());      
     }
 
     function decimals() public view virtual override returns (uint8) {

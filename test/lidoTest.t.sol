@@ -20,7 +20,6 @@ contract LidoTest is Test {
     address public admin;
     address public user = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266;
 
-    address public executor = 0x70997970C51812dc3A010C7d01b50e0d17dc79C8;
     uint256 public mainnetFork;
 
     IERC20 public baseToken;
@@ -46,9 +45,8 @@ contract LidoTest is Test {
                 "ETH Staking",
                 "ETH",
                 1,
-                1,
-                executor,
-                address(0)),
+                1
+            ),
             address(swapRouter)
         );
 
@@ -123,13 +121,31 @@ contract LidoTest is Test {
         
         uint256 balanceB = user.balance;
         uint256 amountOutMin = 1e18;
-
-        console.log("stETH Bal B:", lido.balanceOf(address(nilla)));
         uint256 receivedETH = nilla.redeem(shares, user, amountOutMin);
-        console.log("stETH Bal A:", lido.balanceOf(address(nilla)));
         
         uint256 balanceA = user.balance;
         uint256 reserveAfter = nilla.reserves(address(lido));
+        assertEq(reserveAfter - reserveBefore, withdrawFee);
+        assertEq(receivedETH, balanceA - balanceB);
+    }
+
+    function testFuzzyRedeem(uint256 amount) public {
+        amount = bound(amount, 1e15, 1e22);
+        nilla.deposit{value: amount}(user);
+        console.log("Total supply:", nilla.totalSupply());
+
+        vm.warp(block.timestamp + 1_000_000);
+
+        uint256 shares = nilla.balanceOf(user);  // Redeem total shares
+        uint256 withdrawFee = shares * 1 / 10_000;
+        uint256 reserveBefore = nilla.reserves(address(lido));
+        
+        uint256 balanceB = user.balance;
+        uint256 receivedETH = nilla.redeem(shares, user, amount/10);
+        uint256 balanceA = user.balance;
+
+        uint256 reserveAfter = nilla.reserves(address(lido));
+
         assertEq(reserveAfter - reserveBefore, withdrawFee);
         assertEq(receivedETH, balanceA - balanceB);
     }

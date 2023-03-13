@@ -32,6 +32,7 @@ contract LidoNillaLiquidityStaking is BaseNillaEarn {
     ) external {
         __initialize__(_name, _symbol, _depositFeeBPS, _withdrawFeeBPS);
         swapRouter = ICurvePool(_swapRouter);
+        IERC20(stETH).safeApprove(_swapRouter, type(uint256).max);
     }
 
     constructor(address _stETH) {
