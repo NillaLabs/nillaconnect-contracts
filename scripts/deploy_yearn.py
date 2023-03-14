@@ -1,10 +1,26 @@
 import click
 import eth_utils
+import json
 
 from brownie import accounts, network, interface, ZERO_ADDRESS, Contract
 from brownie import ProxyAdminImpl, YearnNillaVault, TransparentUpgradeableProxyImpl
 
 network.priority_fee("2 gwei")
+data_chainId = json.load(open('./utils/chainId.json'))
+data_address = json.load(open('./utils/address.json'))
+
+chainId = "N/A"
+yvToken = "N/A"
+partner_tracker = "N/A"
+
+deployer = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266" # NOTE: Change address later
+
+def set_network(network):
+    chainId = data_chainId[network.upper()] 
+
+def set_vault(token):
+    yvToken = data_address[chainId]['YEARN_VAULT'][token.upper()]
+    partner_tracker = data_address[chainId]['YEARN_PARTNER_TRACKER']
 
 def encode_function_data(initializer=None, *args):
     if len(args) == 0 or not initializer:
@@ -12,26 +28,22 @@ def encode_function_data(initializer=None, *args):
     return initializer.encode_input(*args)
 
 def main():
+    set_network('mainnet')
+    set_vault('eth')
     print(f"Network: '{network.show_active()}'")
-    # deployer = accounts[1]
-    # dev = accounts.load(click.prompt("Account", type=click.Choice(accounts.load())))
-    deployer = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
     print(f"Using account: [{deployer}]")
 
     admin = ProxyAdminImpl.deploy({'from': deployer})
     impl = YearnNillaVault.deploy({'from': deployer})
-    yv_token = interface.IYVToken("0xa258C4606Ca8206D8aA700cE2143D7db854D168c")
-    yearn_partner_tracker = interface.IYearnPartnerTracker("0x8ee392a4787397126C163Cb9844d7c447da419D8")
-    executor = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
+    yv_token = interface.IYVToken(yvToken)
+    yearn_partner_tracker = interface.IYearnPartnerTracker(partner_tracker)
     yearn_initilize_encoded = encode_function_data(impl.initialize,
                                                    yv_token.address,
                                                    yearn_partner_tracker.address,
                                                    "WETH Yearn Vault",
                                                    "NYVWETH",
                                                    3,
-                                                   3,
-                                                   executor,
-                                                   ZERO_ADDRESS
+                                                   3
                                                    )
     proxy_impl = TransparentUpgradeableProxyImpl.deploy(
             impl,
