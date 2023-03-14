@@ -15,17 +15,15 @@ contract LidoNillaLiquidityStaking is BaseNillaEarn {
     using SafeERC20 for IERC20;
     using Math for uint256;
 
-    IstETH public stETH;
+    IstETH public immutable stETH;
     ICurvePool public swapRouter;
 
-    IERC20 public baseToken;
     uint8 private _decimals;
 
     event Deposit(address indexed depositor, address indexed receiver, uint256 amount);
     event Withdraw(address indexed withdrawer, address indexed receiver, uint256 amount);
 
     function initialize(
-        address _stETH,
         address _swapRouter,
         string memory _name,
         string memory _symbol,
@@ -33,11 +31,12 @@ contract LidoNillaLiquidityStaking is BaseNillaEarn {
         uint16 _withdrawFeeBPS
     ) external {
         __initialize__(_name, _symbol, _depositFeeBPS, _withdrawFeeBPS);
-        stETH = IstETH(_stETH);
         swapRouter = ICurvePool(_swapRouter);
-        IERC20 _baseToken = IERC20(_stETH);
-        baseToken = _baseToken;
-        _baseToken.safeApprove(_swapRouter, type(uint256).max);
+        IERC20(stETH).safeApprove(_swapRouter, type(uint256).max);
+    }
+
+    constructor(address _stETH) {
+        stETH = IstETH(_stETH);
         _decimals = IstETH(_stETH).decimals();
     }
 
@@ -73,8 +72,8 @@ contract LidoNillaLiquidityStaking is BaseNillaEarn {
         // swap user's fund via Curve; stETH --> ETH
         uint256 ETHBefore = address(this).balance;
         swapRouter.exchange{value: 0}(
-            1, // stETH
-            0, // ETH
+            1, // index of stETH in Curve Pool
+            0, // index of ETH in Curve Pool
             amount,
             minAmount
         );

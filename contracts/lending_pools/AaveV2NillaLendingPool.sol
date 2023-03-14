@@ -55,7 +55,7 @@ contract AaveV2NillaLendingPool is BaseNillaEarn {
         _baseToken.safeTransferFrom(msg.sender, address(this), _amount);
         uint256 receivedBaseToken = _baseToken.balanceOf(address(this)) - baseTokenBefore;
         // deposit to Aave v2.
-        // using share not rebase token.
+        // using share not rebase amount.
         uint256 aTokenShareBefore = _aToken.scaledBalanceOf(address(this));
         lendingPool.deposit(address(_baseToken), receivedBaseToken, address(this), 0);
         uint256 received = _aToken.scaledBalanceOf(address(this)) - aTokenShareBefore;
@@ -107,8 +107,7 @@ contract AaveV2NillaLendingPool is BaseNillaEarn {
             // using shares for aToken
             uint256 aTokenShareBefore = _aToken.scaledBalanceOf(address(this));
             IERC20(_token).safeTransfer(msg.sender, _amount);
-            uint256 transferedATokenShare = (_aToken.scaledBalanceOf(address(this)) -
-                aTokenShareBefore);
+            uint256 transferedATokenShare = aTokenShareBefore - _aToken.scaledBalanceOf(address(this));
             reserves[_token] -= transferedATokenShare;
             emit WithdrawReserve(msg.sender, _token, transferedATokenShare);
         }

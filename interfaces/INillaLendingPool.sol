@@ -13,7 +13,7 @@ interface INillaLendingPool is IERC20 {
         address receiver
     ) external returns (uint256);
 
-    // deposit in Lido or used when depositing ETH directly
+    // deposit in Lido
     // No need for the `amount` to be specified
     function deposit(
         address receiver
@@ -30,4 +30,16 @@ interface INillaLendingPool is IERC20 {
         address receiver,
         uint256 maxLoss // NOTE: Could be `minAmount` when calling in Lido's pool
     ) external returns (uint256);
+
+    function withdrawReserve(
+        address token,
+        uint256 amount
+    ) external;
+
+    // re-invest in AaveV3
+    function reinvest(
+        uint16 amountOutMin,
+        address[] calldata path,
+        uint256 deadline
+    ) external;
 }

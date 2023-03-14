@@ -38,9 +38,7 @@ contract YearnNillaVault is BaseNillaEarn {
 
         IERC20 _baseToken = IERC20(address(IYVToken(_yvToken).token()));
         baseToken = _baseToken;
-        _baseToken.safeApprove(_yvToken, type(uint256).max);
         _baseToken.safeApprove(_yearnPartnerTracker, type(uint256).max);
-
         _decimals = IYVToken(_yvToken).decimals();
     }
 
