@@ -17,11 +17,16 @@ def encode_function_data(initializer=None, *args):
         return eth_utils.to_bytes(hexstr="0x")
     return initializer.encode_input(*args)
 
-def main():
-    st_eth = data_address['1']['LIDO']['STETH']
-    curve_pool = data_address['1']['LIDO']['CURVE_POOL']
+def print_info():
+    print('-----------------------------------')
     print(f"Network: '{network.show_active()}'")
     print(f"Using account: [{deployer}]")
+    print('-----------------------------------')
+
+def main():
+    print_info()
+    st_eth = data_address['1']['LIDO']['STETH']
+    curve_pool = data_address['1']['LIDO']['CURVE_POOL']
 
     admin = ProxyAdminImpl.deploy({'from': deployer})
     impl = LidoNillaLiquidityStaking.deploy(st_eth, {'from': deployer})

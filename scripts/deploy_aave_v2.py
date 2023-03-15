@@ -25,11 +25,17 @@ def encode_function_data(initializer=None, *args):
         return eth_utils.to_bytes(hexstr="0x")
     return initializer.encode_input(*args)
 
-def main():
-    chain_id = set_network('mainnet')
-    a_token, lending_pool = set_vault(chain_id, 'weth')
+def print_info():
+    print('-----------------------------------')
     print(f"Network: '{network.show_active()}'")
     print(f"Using account: [{deployer}]")
+    print('-----------------------------------')
+
+def main():
+    print_info()
+    
+    chain_id = set_network('avalanche')
+    a_token, lending_pool = set_vault(chain_id, 'aave')
 
     admin = ProxyAdminImpl.deploy({'from': deployer})
     impl = AaveV2NillaLendingPool.deploy({'from': deployer})

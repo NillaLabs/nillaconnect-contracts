@@ -25,11 +25,17 @@ def encode_function_data(initializer=None, *args):
         return eth_utils.to_bytes(hexstr="0x")
     return initializer.encode_input(*args)
 
-def main():
-    chain_id = set_network('mainnet')
-    yv_token, partner_tracker = set_vault(chain_id, 'eth')
+def print_info():
+    print('-----------------------------------')
     print(f"Network: '{network.show_active()}'")
     print(f"Using account: [{deployer}]")
+    print('-----------------------------------')
+
+def main():
+    print_info()
+    
+    chain_id = set_network('mainnet')
+    yv_token, partner_tracker = set_vault(chain_id, 'eth')
 
     admin = ProxyAdminImpl.deploy({'from': deployer})
     impl = YearnNillaVault.deploy({'from': deployer})

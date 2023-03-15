@@ -29,12 +29,17 @@ def encode_function_data(initializer=None, *args):
         return eth_utils.to_bytes(hexstr="0x")
     return initializer.encode_input(*args)
 
-def main():
-    chain_id = set_network('mainnet')
-    data = set_lending_pool(chain_id, 'WETH')
-
+def print_info():
+    print('-----------------------------------')
     print(f"Network: '{network.show_active()}'")
     print(f"Using account: [{deployer}]")
+    print('-----------------------------------')
+
+def main():
+    print_info()
+    
+    chain_id = set_network('mainnet')
+    data = set_lending_pool(chain_id, 'WETH')
 
     rewardsController = data[0]
     weth = data[1]
