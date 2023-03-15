@@ -3,7 +3,7 @@ import json
 
 from brownie.convert import to_address
 from brownie import network, interface, Contract
-from brownie import ProxyAdminImpl, AaveV3NillaLendingPool, TransparentUpgradeableProxyImpl
+from brownie import ProxyAdminImpl, AaveV3NillaLendingPool, TransparentUpgradeableProxyImplNative
 
 network.priority_fee("2 gwei")
 f_chain = open('./scripts/utils/chainId.json',)
@@ -60,7 +60,7 @@ def main():
         3,
         3
     )
-    proxy_impl = TransparentUpgradeableProxyImpl.deploy(
+    proxy_impl = TransparentUpgradeableProxyImplNative.deploy(
         impl,
         admin,
         aav_v3_initilize_encoded,
