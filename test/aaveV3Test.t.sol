@@ -55,11 +55,6 @@ contract AaveV3Test is Test {
         vm.label(address(rewardsController), "#### Reward Controller ####");
         vm.label(address(swapRouter), "#### Swap Router ####");
 
-        ProtocolFee memory protocolFee;
-        protocolFee.depositFeeBPS = 1;
-        protocolFee.harvestFeeBPS = 1;
-        protocolFee.withdrawFeeBPS = 1;
-
         admin = address(new ProxyAdminImpl());
         impl  = address(new AaveV3NillaLendingPool(
                             address(rewardsController),
@@ -77,7 +72,9 @@ contract AaveV3Test is Test {
                 bot,
                 "Nilla-AaveV3 USDT LP",
                 "nUSDT",
-                protocolFee
+                1,
+                1,
+                1
             ),
             WETH
         );
