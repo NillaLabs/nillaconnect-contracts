@@ -1,7 +1,7 @@
 import eth_utils
 import json
 
-from brownie import network, interface, Contract
+from brownie import network, Contract
 from brownie import ProxyAdminImpl, YearnNillaVault, TransparentUpgradeableProxyImpl
 
 network.priority_fee("2 gwei")
