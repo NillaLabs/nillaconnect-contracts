@@ -16,9 +16,7 @@ def set_network(network):
     return data_chain_id[network.upper()] 
 
 def set_vault(chain_id, token):
-    a_token = data_address[chain_id]['AAVEV2_ATOKEN'][token.upper()]
-    lending_pool = data_address[chain_id]['AAVEV2_LENDINGPOOL']
-    return a_token, lending_pool
+    return data_address[chain_id]['AAVEV2_ATOKEN'][token.upper()]
 
 def encode_function_data(initializer=None, *args):
     if len(args) == 0 or not initializer:
@@ -33,15 +31,14 @@ def print_info():
 
 def main():
     print_info()
-    
+
     chain_id = set_network('avalanche')
-    a_token, lending_pool = set_vault(chain_id, 'aave')
+    a_token = set_vault(chain_id, 'aave')
 
     admin = ProxyAdminImpl.deploy({'from': deployer})
     impl = AaveV2NillaLendingPool.deploy({'from': deployer})
     aave_v2_initilize_encoded = encode_function_data(
         impl.initialize,
-        lending_pool,
         a_token,
         "WETH AAVE V2 LP",
         "naWETH",
