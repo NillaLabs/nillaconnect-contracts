@@ -38,26 +38,22 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
     event Reinvest(address indexed POOL, uint256 amount);
     event SetHarvestBot(address indexed newBot);
 
-    struct ProtocolFee {
-        uint16 depositFeeBPS;
-        uint16 withdrawFeeBPS;
-        uint16 harvestFeeBPS;
-    }
-
     function initialize(
         address _aToken,
         address _swapRouter,
         address _harvestBot,
         string calldata _name,
         string calldata _symbol,
-        ProtocolFee calldata _protocolFee
+        uint16 _depositFeeBPS,
+        uint16 _withdrawFeeBPS,
+        uint16 _harvestFeeBPS
     ) external {
-        __initialize__(_name, _symbol, _protocolFee.depositFeeBPS, _protocolFee.withdrawFeeBPS);
+        __initialize__(_name, _symbol, _depositFeeBPS, _withdrawFeeBPS);
         aToken = IATokenV3(_aToken);
         IERC20 _baseToken = IERC20(IATokenV3(_aToken).UNDERLYING_ASSET_ADDRESS());
         baseToken = _baseToken;
         _baseToken.safeApprove(IATokenV3(_aToken).POOL(), type(uint256).max);
-        harvestFeeBPS = _protocolFee.harvestFeeBPS;
+        harvestFeeBPS = _harvestFeeBPS;
         swapRouter = IUniswapRouterV2(_swapRouter);
         _decimals = IATokenV3(_aToken).decimals(); 
         HARVEST_BOT = _harvestBot; 
