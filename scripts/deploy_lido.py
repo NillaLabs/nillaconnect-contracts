@@ -1,7 +1,7 @@
 import eth_utils
 import json
 
-from brownie import network, interface, Contract
+from brownie import network, Contract
 from brownie import ProxyAdminImpl, LidoNillaLiquidityStaking, TransparentUpgradeableProxyImplNative
 
 network.priority_fee("2 gwei")
@@ -37,7 +37,7 @@ def main():
         impl,
         admin,
         aave_v2_initilize_encoded,
-        curve_pool
+        curve_pool,
         {'from': deployer}
     )
     proxy_vault = Contract.from_abi("LidoNillaLiquidityStaking", proxy_impl.address, impl.abi)
