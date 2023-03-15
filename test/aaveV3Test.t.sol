@@ -8,7 +8,7 @@ import "../contracts/ProxyAdminImpl.sol";
 import "../contracts/TransparentUpgradeableProxyImplNative.sol";
 import "../contracts/lending_pools/AaveV3NillaLendingPool.sol";
 
-import "../interfaces/IATokenV3.sol";
+import "../interfaces/IAToken.sol";
 import "../interfaces/IRewardsController.sol";
 import "../interfaces/IUniswapRouterV2.sol";
 import "../interfaces/IWNative.sol";
@@ -32,7 +32,7 @@ contract AaveV3Test is Test {
     uint256 public avalancheFork;
 
     IERC20 public baseToken;
-    IATokenV3 public aToken = IATokenV3(0x6ab707Aca953eDAeFBc4fD23bA73294241490620);
+    IAToken public aToken = IAToken(0x6ab707Aca953eDAeFBc4fD23bA73294241490620);
     IRewardsController rewardsController = IRewardsController(0x929EC64c34a17401F460460D4B9390518E5B473e);
     IUniswapRouterV2 swapRouter = IUniswapRouterV2(0x60aE616a2155Ee3d9A68541Ba4544862310933d4);
 
