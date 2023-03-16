@@ -38,12 +38,6 @@ contract AaveV3Test is Test {
 
     AaveV3NillaLendingPool public aaveV3Pool;
 
-    struct ProtocolFee {
-        uint16 depositFeeBPS;
-        uint16 withdrawFeeBPS;
-        uint16 harvestFeeBPS;
-    }
-
     function setUp() public {
         avalancheFork = vm.createFork("https://avalanche-mainnet.infura.io/v3/e6282a54498e433a87766276d1d4b67b"); // Avalanche
         vm.selectFork(avalancheFork);
