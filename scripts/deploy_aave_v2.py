@@ -32,8 +32,8 @@ def print_info():
 def main():
     print_info()
 
-    chain_id = set_network('avalanche')
-    a_token = set_vault(chain_id, 'aave')
+    chain_id = set_network('mainnet')
+    a_token = set_vault(chain_id, 'usdc')
 
     admin = ProxyAdminImpl.deploy({'from': deployer})
     impl = AaveV2NillaLendingPool.deploy({'from': deployer})
