@@ -2,7 +2,7 @@ import eth_utils
 import json
 
 from brownie import network, Contract
-from brownie import ProxyAdminImpl, YearnNillaVault, TransparentUpgradeableProxyImpl
+from brownie import ProxyAdminImpl, YearnNillaVault, TransparentUpgradeableProxyImpl, NativeGatewayYearn
 
 network.priority_fee("2 gwei")
 f_chain = open('./scripts/utils/chainId.json',)
@@ -11,6 +11,8 @@ data_chain_id = json.load(f_chain)
 data_address = json.load(f_address)
 
 deployer = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266" # NOTE: Change address later
+
+WETH = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2'
 
 def set_network(network):
     return data_chain_id[network.upper()] 
@@ -55,4 +57,7 @@ def main():
         {'from': deployer}
     )
     proxy_vault = Contract.from_abi("YearnNillaVault", proxy_impl.address, impl.abi)
-    print(proxy_vault)
+    gateway = NativeGatewayYearn.deploy(WETH, {'from': deployer})
+
+    print('Proxy Vault:', proxy_vault)
+    print('Gateway:', gateway)
