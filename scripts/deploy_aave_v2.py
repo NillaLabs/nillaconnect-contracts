@@ -5,8 +5,8 @@ from brownie import network, Contract
 from brownie import ProxyAdminImpl, AaveV2NillaLendingPool, TransparentUpgradeableProxyImpl
 
 network.priority_fee("2 gwei")
-f_chain = open('./scripts/utils/chainId.json',)
-f_address = open('./scripts/utils/address.json',)
+f_chain = open('./scripts/constants/chainId.json',)
+f_address = open('./scripts/constants/address.json',)
 data_chain_id = json.load(f_chain)
 data_address = json.load(f_address)
 
