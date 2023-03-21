@@ -4,6 +4,8 @@ import json
 from brownie import network, Contract
 from brownie import ProxyAdminImpl, CompoundNillaLendingPool, TransparentUpgradeableProxyImpl
 
+from scripts.utils.logging import print_info
+
 network.priority_fee("2 gwei")
 f_chain = open('./scripts/constants/chainId.json',)
 f_address = open('./scripts/constants/address.json',)
@@ -19,12 +21,6 @@ def encode_function_data(initializer=None, *args):
 
 def set_c_token(token):
     return data_address['1']['COMPOUND_CTOKEN'][token.upper()] 
-
-def print_info():
-    print('-----------------------------------')
-    print(f"Network: '{network.show_active()}'")
-    print(f"Using account: [{deployer}]")
-    print('-----------------------------------')
 
 def main():
     print_info()

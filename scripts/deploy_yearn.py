@@ -4,6 +4,8 @@ import json
 from brownie import network, Contract
 from brownie import ProxyAdminImpl, YearnNillaVault, TransparentUpgradeableProxyImpl, NativeGatewayYearn
 
+from scripts.utils.logging import print_info
+
 network.priority_fee("2 gwei")
 f_chain = open('./scripts/constants/chainId.json',)
 f_address = open('./scripts/constants/address.json',)
@@ -26,12 +28,6 @@ def encode_function_data(initializer=None, *args):
     if len(args) == 0 or not initializer:
         return eth_utils.to_bytes(hexstr="0x")
     return initializer.encode_input(*args)
-
-def print_info():
-    print('-----------------------------------')
-    print(f"Network: '{network.show_active()}'")
-    print(f"Using account: [{deployer}]")
-    print('-----------------------------------')
 
 def main():
     print_info()
