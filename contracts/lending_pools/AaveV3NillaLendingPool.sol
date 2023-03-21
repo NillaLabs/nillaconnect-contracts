@@ -9,7 +9,7 @@ import "OpenZeppelin/openzeppelin-contracts@4.7.3/contracts/utils/math/Math.sol"
 import "../BaseNillaEarn.sol";
 
 import "../../interfaces/IWNative.sol";
-import "../../interfaces/IATokenV3.sol";
+import "../../interfaces/IAToken.sol";
 import "../../interfaces/IAaveV3LendingPool.sol";
 import "../../interfaces/IRewardsController.sol";
 import "../../interfaces/IUniswapRouterV2.sol";
@@ -22,7 +22,7 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
 
     IUniswapRouterV2 swapRouter;
 
-    IATokenV3 public aToken;
+    IAToken public aToken;
     IERC20 public baseToken;
     uint8 internal _decimals;
     IAaveV3LendingPool public immutable POOL;
@@ -38,28 +38,24 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
     event Reinvest(address indexed POOL, uint256 amount);
     event SetHarvestBot(address indexed newBot);
 
-    struct ProtocolFee {
-        uint16 depositFeeBPS;
-        uint16 withdrawFeeBPS;
-        uint16 harvestFeeBPS;
-    }
-
     function initialize(
         address _aToken,
         address _swapRouter,
         address _harvestBot,
         string calldata _name,
         string calldata _symbol,
-        ProtocolFee calldata _protocolFee
+        uint16 _depositFeeBPS,
+        uint16 _withdrawFeeBPS,
+        uint16 _harvestFeeBPS
     ) external {
-        __initialize__(_name, _symbol, _protocolFee.depositFeeBPS, _protocolFee.withdrawFeeBPS);
-        aToken = IATokenV3(_aToken);
-        IERC20 _baseToken = IERC20(IATokenV3(_aToken).UNDERLYING_ASSET_ADDRESS());
+        __initialize__(_name, _symbol, _depositFeeBPS, _withdrawFeeBPS);
+        aToken = IAToken(_aToken);
+        IERC20 _baseToken = IERC20(IAToken(_aToken).UNDERLYING_ASSET_ADDRESS());
         baseToken = _baseToken;
-        _baseToken.safeApprove(IATokenV3(_aToken).POOL(), type(uint256).max);
-        harvestFeeBPS = _protocolFee.harvestFeeBPS;
+        _baseToken.safeApprove(IAToken(_aToken).POOL(), type(uint256).max);
+        harvestFeeBPS = _harvestFeeBPS;
         swapRouter = IUniswapRouterV2(_swapRouter);
-        _decimals = IATokenV3(_aToken).decimals(); 
+        _decimals = IAToken(_aToken).decimals(); 
         HARVEST_BOT = _harvestBot; 
         // AaveV3 gives Native to lender as a Rewards in Avalanche Chain.
         IERC20(WNATIVE).safeApprove(address(swapRouter), type(uint256).max);
@@ -72,7 +68,7 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
     ) {
         WNATIVE = IWNative(_wNative);
         REWARDSCONTROLLER = IRewardsController(_rewardsController);
-        POOL = IAaveV3LendingPool(IATokenV3(_aToken).POOL());      
+        POOL = IAaveV3LendingPool(IAToken(_aToken).POOL());      
     }
 
     function decimals() public view virtual override returns (uint8) {
@@ -87,7 +83,7 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
     function deposit(uint256 _amount, address _receiver) external nonReentrant returns (uint256) {
         // gas saving
         IERC20 _baseToken = baseToken;
-        IATokenV3 _aToken = aToken;
+        IAToken _aToken = aToken;
         // transfer fund.
         uint256 baseTokenBefore = _baseToken.balanceOf(address(this));
         _baseToken.safeTransferFrom(msg.sender, address(this), _amount);
@@ -108,7 +104,7 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
         // gas saving
         IAaveV3LendingPool _pool = POOL;
         address _baseToken = address(baseToken);
-        IATokenV3 _aToken = aToken;
+        IAToken _aToken = aToken;
         // burn user's shares
         _burn(_receiver, _shares);
         // collect protocol's fee.
@@ -135,7 +131,7 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
 
     function withdrawReserve(address _token, uint256 _amount) external override {
         require(msg.sender == worker, "only worker");
-        IATokenV3 _aToken = aToken; // gas saving
+        IAToken _aToken = aToken; // gas saving
         if (_token != address(_aToken)) {
             reserves[_token] -= _amount;
             IERC20(_token).safeTransfer(msg.sender, _amount);
@@ -155,7 +151,7 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
         require(msg.sender == HARVEST_BOT, "only harvest bot is allowed");
         require(_path[0] != address(aToken), "Asset to swap should not be aToken");
         // gas saving
-        IATokenV3 _aToken = aToken;
+        IAToken _aToken = aToken;
         IWNative _wNative = IWNative(WNATIVE);
         // claim rewards from rewardController
         uint256 receivedWETH = _claimeRewards(_aToken, _wNative);
@@ -170,7 +166,7 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
     }
 
     // NOTE: internal function to avoid stack-too-deep
-    function _claimeRewards(IATokenV3 _aToken, IWNative _wNative) internal returns(uint256 receivedWAVAX) {
+    function _claimeRewards(IAToken _aToken, IWNative _wNative) internal returns(uint256 receivedWAVAX) {
         uint256 WAVAXBefore = _wNative.balanceOf(address(this));
         address[] memory assets = new address[](1);
         assets[0] = address(_aToken);

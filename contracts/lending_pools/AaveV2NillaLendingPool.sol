@@ -26,7 +26,6 @@ contract AaveV2NillaLendingPool is BaseNillaEarn {
     event Withdraw(address indexed withdrawer, address indexed receiver, uint256 amount);
 
     function initialize(
-        address _lendingPool,
         address _aToken,
         string memory _name,
         string memory _symbol,
@@ -34,11 +33,11 @@ contract AaveV2NillaLendingPool is BaseNillaEarn {
         uint16 _withdrawFeeBPS
     ) external {
         __initialize__(_name, _symbol, _depositFeeBPS, _withdrawFeeBPS);
-        lendingPool = IAaveV2LendingPool(_lendingPool);
+        lendingPool = IAaveV2LendingPool(IAToken(_aToken).POOL());
         aToken = IAToken(_aToken);
-        IERC20 _baseToken = IERC20(IAToken(_aToken).underlyingAssetAddress());
+        IERC20 _baseToken = IERC20(IAToken(_aToken).UNDERLYING_ASSET_ADDRESS());
         baseToken = _baseToken;
-        _baseToken.safeApprove(_lendingPool, type(uint256).max);
+        _baseToken.safeApprove(IAToken(_aToken).POOL(), type(uint256).max);
         _decimals = IAToken(_aToken).decimals();
     }
 
