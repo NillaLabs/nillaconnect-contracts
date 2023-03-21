@@ -1,29 +1,19 @@
-import eth_utils
 import json
 
 from brownie import network, Contract
 from brownie import ProxyAdminImpl, AaveV2NillaLendingPool, TransparentUpgradeableProxyImpl
 
-from scripts.utils.logging import print_info
+from scripts.utils.utils import *
 
 network.priority_fee("2 gwei")
-f_chain = open('./scripts/constants/chainId.json',)
 f_address = open('./scripts/constants/address.json',)
-data_chain_id = json.load(f_chain)
+
 data_address = json.load(f_address)
 
 deployer = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266" # NOTE: Change address later
 
-def set_network(network):
-    return data_chain_id[network.upper()] 
-
 def set_vault(chain_id, token):
     return data_address[chain_id]['AAVEV2_ATOKEN'][token.upper()]
-
-def encode_function_data(initializer=None, *args):
-    if len(args) == 0 or not initializer:
-        return eth_utils.to_bytes(hexstr="0x")
-    return initializer.encode_input(*args)
 
 def main():
     print_info()
