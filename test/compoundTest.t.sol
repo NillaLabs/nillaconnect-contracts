@@ -46,8 +46,8 @@ contract CompoundTest is Test {
             abi.encodeWithSelector(
                 CompoundNillaLendingPool.initialize.selector,
                 address(cToken),
-                address(bot),
                 swapRouter,
+                address(bot),
                 "Compound - DAI",
                 "ncDAI",
                 1,

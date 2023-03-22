@@ -36,8 +36,8 @@ contract CompoundNillaLendingPool is BaseNillaEarn {
 
     function initialize(
         address _cToken,
-        address _harvestBot,
         address _swapRouter,
+        address _harvestBot,
         string memory _name,
         string memory _symbol,
         uint16 _depositFeeBPS,
