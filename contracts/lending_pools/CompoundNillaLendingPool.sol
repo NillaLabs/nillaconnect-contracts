@@ -7,14 +7,20 @@ import "OpenZeppelin/openzeppelin-contracts@4.7.3/contracts/token/ERC20/utils/Sa
 
 import "../BaseNillaEarn.sol";
 
+import "../../interfaces/IWNative.sol";
 import "../../interfaces/ICToken.sol";
 import "../../interfaces/IComptroller.sol";
+import "../../interfaces/IUniswapRouterV2.sol";
 
 contract CompoundNillaLendingPool is BaseNillaEarn {
     using SafeERC20 for IERC20;
 
+    IUniswapRouterV2 public swapRouter;
+
+    IWNative public immutable WNATIVE;
+    IComptroller public immutable COMPTROLLER;
+
     ICToken public cToken;
-    IComptroller public comptroller;
     IERC20 public baseToken;
     uint8 private _decimals;
 
@@ -25,12 +31,13 @@ contract CompoundNillaLendingPool is BaseNillaEarn {
 
     event Deposit(address indexed depositor, address indexed receiver, uint256 amount);
     event Withdraw(address indexed withdrawer, address indexed receiver, uint256 amount);
+    event Reinvest(uint256 amount);
     event SetHarvestBot(address indexed newBot);
 
     function initialize(
         address _cToken,
-        address _comptroller,
         address _harvestBot,
+        address _swapRouter,
         string memory _name,
         string memory _symbol,
         uint16 _depositFeeBPS,
@@ -39,13 +46,21 @@ contract CompoundNillaLendingPool is BaseNillaEarn {
     ) external {
         __initialize__(_name, _symbol, _depositFeeBPS, _withdrawFeeBPS);
         cToken = ICToken(_cToken);
-        comptroller = IComptroller(_comptroller);
+        swapRouter = IUniswapRouterV2(_swapRouter);
         harvestFeeBPS = _harvestFeeBPS;
-         HARVEST_BOT = _harvestBot; 
+        HARVEST_BOT = _harvestBot; 
         IERC20 _baseToken = IERC20(ICToken(_cToken).underlying());
         baseToken = _baseToken;
         _baseToken.safeApprove(_cToken, type(uint256).max);
         _decimals = ICToken(_cToken).decimals();
+    }
+
+    constructor(
+        address _comptroller,
+        address _wNative
+    ) {
+        COMPTROLLER = IComptroller(_comptroller);
+        WNATIVE = IWNative(_wNative);
     }
 
     function decimals() public view virtual override returns (uint8) {
@@ -98,19 +113,37 @@ contract CompoundNillaLendingPool is BaseNillaEarn {
     /**
      * Reinvest() on Mainnet
      * rewards: compound token
-     * Comptroller.sol --> claimeReward() // around this name
+     * COMPTROLLER.sol --> claimeReward() // around this name
      * swap on either UniV2 or Sushi or UniV3 ; Check LQ.
      * Follow the same logic as others reinvest(). :D
      */
-    // function reinvest(uint256 _amountOutMin, address[] calldata _path, uint256 _deadline) external {
-    //     require(msg.sender == HARVEST_BOT, "only harvest bot is allowed");
-    //     require(_path[0] != address(cToken), "Asset to swap should not be cToken");
-    //     // gas saving
-    //     ICToken _cToken = cToken;
-    //     IERC20 compound = IERC20(COMP);
-    //     // claime rewards from controller
-    //     uint256 compBefore = compound.balanceOf(address(this));
-    //     comptroller.claimComp(address(this));
-    //     uint256 receivedComp = compound.balanceOf(address(this)) - compBefore;
-    // }
+    function reinvest(uint256 _amountOutMin, address[] calldata _path, uint256 _deadline, uint256 _amountOutMinForBot, address[] calldata _pathForBot, uint256 _dealineForBot) external {
+        require(msg.sender == HARVEST_BOT, "only harvest bot is allowed");
+        require(_path[0] != address(cToken), "Asset to swap should not be cToken");
+        // gas saving
+        ICToken _cToken = cToken;
+        IERC20 compound = IERC20(COMP);
+        IERC20 _baseToken = baseToken;
+        IWNative _WNATIVE = WNATIVE;
+        // claime rewards from controller
+        uint256 compBefore = compound.balanceOf(address(this));
+        COMPTROLLER.claimComp(address(this));
+        uint256 receivedComp = compound.balanceOf(address(this)) - compBefore;
+        // calculate worker's fee before swapping
+        uint256 botFee = receivedComp * harvestFeeBPS / BPS;
+        uint256 baseTokenBefore = _baseToken.balanceOf(address(this));
+        swapRouter.swapExactTokensForTokens(receivedComp - botFee, _amountOutMin, _path, address(this), _deadline);
+        uint256 receivedBaseToken = _baseToken.balanceOf(address(this)) - baseTokenBefore;
+        // re-supply into pool
+        require(_cToken.mint(receivedBaseToken) == 0, "!mint");
+        // send botFee to bot, swap COMP to WETH
+        uint256 wethBefore = IERC20(_WNATIVE).balanceOf(address(this));
+        swapRouter.swapExactTokensForTokens(botFee, _amountOutMinForBot, _pathForBot, address(this), _dealineForBot);
+        uint256 receivedWeth = IERC20(_WNATIVE).balanceOf(address(this)) - wethBefore;
+        // unwrap WETH to native
+        _WNATIVE.withdraw(receivedWeth);
+        (bool _success, ) = payable(HARVEST_BOT).call{value: receivedWeth}("");
+        require(_success, "Failed to send Ethers to bot");
+        emit Reinvest(receivedBaseToken);
+    }
 }
