@@ -21,6 +21,9 @@ contract CompoundTest is Test {
 
     uint256 public mainnetFork;
 
+    address public WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address public swapRouter = 0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F; // Sushi SwapRouter --UniV2 forked.
+
     IERC20 public baseToken;
     ICToken public cToken = ICToken(0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643);
     address public comptroller = 0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B;
@@ -35,7 +38,7 @@ contract CompoundTest is Test {
         startHoax(user);
 
         admin = address(new ProxyAdminImpl());
-        impl = address(new CompoundNillaLendingPool());
+        impl = address(new CompoundNillaLendingPool(comptroller, WETH));
 
         proxy = new TransparentUpgradeableProxyImpl(
             impl,
@@ -43,13 +46,13 @@ contract CompoundTest is Test {
             abi.encodeWithSelector(
                 CompoundNillaLendingPool.initialize.selector,
                 address(cToken),
-                comptroller,
                 address(bot),
+                swapRouter,
                 "Compound - DAI",
                 "ncDAI",
-                0,
-                0,
-                0
+                1,
+                1,
+                1
             )
         );
 
@@ -113,7 +116,7 @@ contract CompoundTest is Test {
         console.log("After D / Before R:", baseToken.balanceOf(user));
         uint256 reserveBefore = nilla.reserves(address(cToken));
         uint256 shares = nilla.balanceOf(user);
-        uint256 withdrawFee = shares * 0 / 10_000;
+        uint256 withdrawFee = shares * 1 / 10_000;
 
         console.log("User's shares:", shares);
         console.log("Nilla's shares:", cToken.balanceOf(address(nilla)));
