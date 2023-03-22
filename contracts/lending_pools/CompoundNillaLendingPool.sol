@@ -117,7 +117,7 @@ contract CompoundNillaLendingPool is BaseNillaEarn {
      * swap on either UniV2 or Sushi or UniV3 ; Check LQ.
      * Follow the same logic as others reinvest(). :D
      */
-    function reinvest(uint256 _amountOutMin, address[] calldata _path, uint256 _deadline, uint256 _amountOutMinForBot, address[] calldata _pathForBot, uint256 _dealineForBot) external {
+    function reinvest(uint256 _amountOutMin, uint256 _amountOutMinForBot, address[] calldata _path, uint256 _deadline) external {
         require(msg.sender == HARVEST_BOT, "only harvest bot is allowed");
         require(_path[0] != address(cToken), "Asset to swap should not be cToken");
         // gas saving
@@ -131,19 +131,27 @@ contract CompoundNillaLendingPool is BaseNillaEarn {
         uint256 receivedComp = compound.balanceOf(address(this)) - compBefore;
         // calculate worker's fee before swapping
         uint256 botFee = receivedComp * harvestFeeBPS / BPS;
-        uint256 baseTokenBefore = _baseToken.balanceOf(address(this));
-        swapRouter.swapExactTokensForTokens(receivedComp - botFee, _amountOutMin, _path, address(this), _deadline);
-        uint256 receivedBaseToken = _baseToken.balanceOf(address(this)) - baseTokenBefore;
-        // re-supply into pool
-        require(_cToken.mint(receivedBaseToken) == 0, "!mint");
-        // send botFee to bot, swap COMP to WETH
-        uint256 wethBefore = IERC20(_WNATIVE).balanceOf(address(this));
-        swapRouter.swapExactTokensForTokens(botFee, _amountOutMinForBot, _pathForBot, address(this), _dealineForBot);
-        uint256 receivedWeth = IERC20(_WNATIVE).balanceOf(address(this)) - wethBefore;
-        // unwrap WETH to native
-        _WNATIVE.withdraw(receivedWeth);
-        (bool _success, ) = payable(HARVEST_BOT).call{value: receivedWeth}("");
-        require(_success, "Failed to send Ethers to bot");
-        emit Reinvest(receivedBaseToken);
+        {
+            // send botFee to bot, swap COMP to WETH
+            uint256 wethBefore = IERC20(_WNATIVE).balanceOf(address(this));
+            // amountOutMin for bot is 90% of fee.
+            address[] memory pathToNative = new address[](2);
+            pathToNative[0] = address(compound);
+            pathToNative[1] = address(_WNATIVE);
+            swapRouter.swapExactTokensForTokens(botFee, _amountOutMinForBot, pathToNative, address(this), _deadline);
+            uint256 receivedWeth = IERC20(_WNATIVE).balanceOf(address(this)) - wethBefore;
+            // unwrap WETH to native
+            _WNATIVE.withdraw(receivedWeth);
+            (bool _success, ) = payable(HARVEST_BOT).call{value: receivedWeth}("");
+            require(_success, "Failed to send Ethers to bot");
+        }
+        {
+            uint256 baseTokenBefore = _baseToken.balanceOf(address(this));
+            swapRouter.swapExactTokensForTokens(receivedComp - botFee, _amountOutMin, _path, address(this), _deadline);
+            uint256 receivedBaseToken = _baseToken.balanceOf(address(this)) - baseTokenBefore;
+            // re-supply into pool
+            require(_cToken.mint(receivedBaseToken) == 0, "!mint");
+            emit Reinvest(receivedBaseToken);
+        }
     }
 }
