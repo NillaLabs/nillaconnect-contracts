@@ -20,7 +20,7 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
 
     IWNative public immutable WNATIVE;
 
-    IUniswapRouterV2 swapRouter;
+    IUniswapRouterV2 public swapRouter;
 
     IAToken public aToken;
     IERC20 public baseToken;
@@ -153,16 +153,17 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
         // gas saving
         IAToken _aToken = aToken;
         IWNative _wNative = IWNative(WNATIVE);
+        IERC20 _baseToken = baseToken;
         // claim rewards from rewardController
         uint256 receivedWETH = _claimeRewards(_aToken, _wNative);
         require(receivedWETH > 0, "No rewards to harvest");
-        // Calculate worker's fee before swapping
-        uint256 workerFee = receivedWETH * harvestFeeBPS / BPS;
+        // Calculate HARVEST_BOT's fee before swapping
+        uint256 botFee = receivedWETH * harvestFeeBPS / BPS;
         // swap WAVAX -> baseToken
-        uint256 baseTokenBefore = baseToken.balanceOf(address(this));
-        swapRouter.swapExactTokensForTokens(receivedWETH - workerFee, _amountOutMin, _path, address(this), _deadline);
-        uint256 receivedBase = baseToken.balanceOf(address(this)) - baseTokenBefore;
-        _reinvest(_wNative, workerFee, receivedBase); // alredy sub workerFee when swap()
+        uint256 baseTokenBefore = _baseToken.balanceOf(address(this));
+        swapRouter.swapExactTokensForTokens(receivedWETH - botFee, _amountOutMin, _path, address(this), _deadline);
+        uint256 receivedBase = _baseToken.balanceOf(address(this)) - baseTokenBefore;
+        _reinvest(_wNative, address(_baseToken), botFee, receivedBase); // alredy sub botFee when swap()
     }
 
     // NOTE: internal function to avoid stack-too-deep
@@ -176,12 +177,12 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
     }
 
     // NOTE: internal function to avoid stack-too-deep
-    function _reinvest(IWNative _wNative, uint256 _workerFee, uint256 _amount) internal {
-        _wNative.withdraw(_workerFee);
-        (bool _success, ) = payable(worker).call{value: _workerFee}("");
-        require(_success, "Failed to send Ethers to worker");
+    function _reinvest(IWNative _wNative, address _baseToken, uint256 _botFee, uint256 _amount) internal {
+        _wNative.withdraw(_botFee);
+        (bool _success, ) = payable(HARVEST_BOT).call{value: _botFee}("");
+        require(_success, "Failed to send Ethers to bot");
         // re-supply into pool
-        POOL.supply(address(baseToken), _amount, address(this), 0);
+        POOL.supply(address(_baseToken), _amount, address(this), 0);
         emit Reinvest(address(POOL), _amount);
     }
 }
