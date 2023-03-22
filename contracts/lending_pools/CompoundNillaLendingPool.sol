@@ -8,26 +8,40 @@ import "OpenZeppelin/openzeppelin-contracts@4.7.3/contracts/token/ERC20/utils/Sa
 import "../BaseNillaEarn.sol";
 
 import "../../interfaces/ICToken.sol";
+import "../../interfaces/IComptroller.sol";
 
 contract CompoundNillaLendingPool is BaseNillaEarn {
     using SafeERC20 for IERC20;
 
     ICToken public cToken;
+    IComptroller public comptroller;
     IERC20 public baseToken;
     uint8 private _decimals;
 
+    uint16 public harvestFeeBPS;
+    address public HARVEST_BOT;
+    
+    IERC20 constant public COMP = IERC20(0xc00e94Cb662C3520282E6f5717214004A7f26888);
+
     event Deposit(address indexed depositor, address indexed receiver, uint256 amount);
     event Withdraw(address indexed withdrawer, address indexed receiver, uint256 amount);
+    event SetHarvestBot(address indexed newBot);
 
     function initialize(
         address _cToken,
+        address _comptroller,
+        address _harvestBot,
         string memory _name,
         string memory _symbol,
         uint16 _depositFeeBPS,
-        uint16 _withdrawFeeBPS
+        uint16 _withdrawFeeBPS,
+        uint16 _harvestFeeBPS
     ) external {
         __initialize__(_name, _symbol, _depositFeeBPS, _withdrawFeeBPS);
         cToken = ICToken(_cToken);
+        comptroller = IComptroller(_comptroller);
+        harvestFeeBPS = _harvestFeeBPS;
+         HARVEST_BOT = _harvestBot; 
         IERC20 _baseToken = IERC20(ICToken(_cToken).underlying());
         baseToken = _baseToken;
         _baseToken.safeApprove(_cToken, type(uint256).max);
@@ -36,6 +50,11 @@ contract CompoundNillaLendingPool is BaseNillaEarn {
 
     function decimals() public view virtual override returns (uint8) {
         return _decimals;
+    }
+
+    function setHarvestBot(address newBot) external onlyOwner {
+        HARVEST_BOT = newBot;
+        emit SetHarvestBot(newBot);
     }
 
     function deposit(uint256 _amount, address _receiver) external nonReentrant returns (uint256) {
@@ -83,4 +102,15 @@ contract CompoundNillaLendingPool is BaseNillaEarn {
      * swap on either UniV2 or Sushi or UniV3 ; Check LQ.
      * Follow the same logic as others reinvest(). :D
      */
+    // function reinvest(uint256 _amountOutMin, address[] calldata _path, uint256 _deadline) external {
+    //     require(msg.sender == HARVEST_BOT, "only harvest bot is allowed");
+    //     require(_path[0] != address(cToken), "Asset to swap should not be cToken");
+    //     // gas saving
+    //     ICToken _cToken = cToken;
+    //     IERC20 compound = IERC20(COMP);
+    //     // claime rewards from controller
+    //     uint256 compBefore = compound.balanceOf(address(this));
+    //     comptroller.claimComp(address(this));
+    //     uint256 receivedComp = compound.balanceOf(address(this)) - compBefore;
+    // }
 }
