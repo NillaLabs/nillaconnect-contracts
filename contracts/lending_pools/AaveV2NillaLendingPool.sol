@@ -9,7 +9,7 @@ import "OpenZeppelin/openzeppelin-contracts@4.7.3/contracts/utils/math/Math.sol"
 import "../BaseNillaEarn.sol";
 
 import "../../interfaces/IAToken.sol";
-import "../../interfaces/IAaveLendingPool.sol";
+import "../../interfaces/IAaveLendingPoolV2.sol";
 
 contract AaveV2NillaLendingPool is BaseNillaEarn {
     using SafeERC20 for IERC20;
@@ -18,7 +18,7 @@ contract AaveV2NillaLendingPool is BaseNillaEarn {
     IAToken public aToken;
     IERC20 public baseToken;
     uint8 private _decimals;
-    IAaveLendingPool public lendingPool;
+    IAaveLendingPoolV2 public lendingPool;
 
     uint256 private constant RAY = 1e27;
 
@@ -33,7 +33,7 @@ contract AaveV2NillaLendingPool is BaseNillaEarn {
         uint16 _withdrawFeeBPS
     ) external {
         __initialize__(_name, _symbol, _depositFeeBPS, _withdrawFeeBPS);
-        lendingPool = IAaveLendingPool(IAToken(_aToken).POOL());
+        lendingPool = IAaveLendingPoolV2(IAToken(_aToken).POOL());
         aToken = IAToken(_aToken);
         IERC20 _baseToken = IERC20(IAToken(_aToken).UNDERLYING_ASSET_ADDRESS());
         baseToken = _baseToken;
@@ -68,7 +68,7 @@ contract AaveV2NillaLendingPool is BaseNillaEarn {
 
     function redeem(uint256 _shares, address _receiver) external nonReentrant returns (uint256) {
         // gas saving
-        IAaveLendingPool _lendingPool = lendingPool;
+        IAaveLendingPoolV2 _lendingPool = lendingPool;
         address _baseToken = address(baseToken);
         IAToken _aToken = aToken;
         // burn user's shares
