@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
-interface IAaveLendingPool {
+interface IAaveLendingPoolV3 {
     struct ReserveData {
         //stores the reserve configuration
         ReserveConfigurationMap configuration;
@@ -58,16 +58,7 @@ interface IAaveLendingPool {
         uint256 data;
     }
 
-    // For V3
     function supply(
-        address asset,
-        uint256 amount,
-        address onBehalfOf,
-        uint16 referralCode
-    ) external;
-    
-    // Legacy function for V2
-    function deposit(
         address asset,
         uint256 amount,
         address onBehalfOf,
