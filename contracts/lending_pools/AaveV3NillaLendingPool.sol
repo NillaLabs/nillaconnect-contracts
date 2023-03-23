@@ -10,7 +10,7 @@ import "../BaseNillaEarn.sol";
 
 import "../../interfaces/IWNative.sol";
 import "../../interfaces/IAToken.sol";
-import "../../interfaces/IAaveV3LendingPool.sol";
+import "../../interfaces/IAaveLendingPool.sol";
 import "../../interfaces/IRewardsController.sol";
 import "../../interfaces/IUniswapRouterV2.sol";
 
@@ -25,7 +25,7 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
     IAToken public aToken;
     IERC20 public baseToken;
     uint8 internal _decimals;
-    IAaveV3LendingPool public immutable POOL;
+    IAaveLendingPool public immutable POOL;
     IRewardsController public immutable REWARDSCONTROLLER;
 
     uint16 public harvestFeeBPS;
@@ -68,7 +68,7 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
     ) {
         WNATIVE = IWNative(_wNative);
         REWARDSCONTROLLER = IRewardsController(_rewardsController);
-        POOL = IAaveV3LendingPool(IAToken(_aToken).POOL());      
+        POOL = IAaveLendingPool(IAToken(_aToken).POOL());      
     }
 
     function decimals() public view virtual override returns (uint8) {
@@ -102,7 +102,7 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
 
     function redeem(uint256 _shares, address _receiver) external nonReentrant returns (uint256) {
         // gas saving
-        IAaveV3LendingPool _pool = POOL;
+        IAaveLendingPool _pool = POOL;
         address _baseToken = address(baseToken);
         IAToken _aToken = aToken;
         // burn user's shares

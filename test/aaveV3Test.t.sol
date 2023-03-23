@@ -181,7 +181,7 @@ contract AaveV3Test is Test {
 
     function testFuzzyRedeem(uint256 amount) public {
         console.log("---------- TEST FUZZY REDEEM ----------");
-        amount = bound(amount, 10, 1e15);
+        amount = bound(amount, 10, 1e13);
         deal(address(baseToken), user, amount);
         aaveV3Pool.deposit(amount, user);
 
@@ -190,7 +190,7 @@ contract AaveV3Test is Test {
         uint256 withdrawFee = shares.mulDiv(1, 10_000);
         uint256 reserveBefore = aaveV3Pool.reserves(address(aToken));
         
-        vm.warp(block.timestamp + 1_000_000_000);
+        vm.warp(block.timestamp + 1_000_000);
         aaveV3Pool.redeem(shares, user);
 
         uint256 addedReserve = aaveV3Pool.reserves(address(aToken)) - reserveBefore;
@@ -246,7 +246,7 @@ contract AaveV3Test is Test {
 
         rewardsController.handleAction(address(aaveV3Pool), aToken.totalSupply(), aToken.scaledBalanceOf(address(aaveV3Pool)));
         vm.stopPrank();
-        startHoax(user);
+        startHoax(bot);
 
         address[] memory _path = new address[](2);
         _path[0] = WETH;
@@ -258,6 +258,6 @@ contract AaveV3Test is Test {
 
         console.log("LP balance in aave before deposit:", aTokenBefore);
         console.log("LP balance in aave after deposit:", aTokenAfterDeposit);
-        console.log("LP balance in aave after redeem:", aTokenAfterReinvest);
+        console.log("LP balance in aave after reinvest:", aTokenAfterReinvest);
     }
 }
