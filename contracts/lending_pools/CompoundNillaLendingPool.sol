@@ -52,6 +52,7 @@ contract CompoundNillaLendingPool is BaseNillaEarn {
         IERC20 _baseToken = IERC20(ICToken(_cToken).underlying());
         baseToken = _baseToken;
         _baseToken.safeApprove(_cToken, type(uint256).max);
+        COMP.safeApprove(_swapRouter, type(uint256).max);
         _decimals = ICToken(_cToken).decimals();
     }
 
