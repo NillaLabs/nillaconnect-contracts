@@ -260,4 +260,21 @@ contract AaveV3Test is Test {
         console.log("LP balance in aave after deposit:", aTokenAfterDeposit);
         console.log("LP balance in aave after reinvest:", aTokenAfterReinvest);
     }
+
+    function testWithdrawReserve() public {
+        uint256 amount = 1e9;
+        deal(address(baseToken), user, amount);
+
+        aaveV3Pool.deposit(amount, user);
+        uint256 reserveB = aaveV3Pool.reserves(address(aToken));
+        uint256 amountToWithdraw = reserveB * 9 / 10;
+        uint256 aTokenShareBefore = aToken.scaledBalanceOf(address(aaveV3Pool));
+        aaveV3Pool.withdrawReserve(address(aToken), amountToWithdraw); // withdraw 90%
+        uint256 aTokenShareAfter = aToken.scaledBalanceOf(address(aaveV3Pool));
+        uint256 transferedATokenShare = aTokenShareBefore - aTokenShareAfter;
+        uint256 reserveA = aaveV3Pool.reserves(address(aToken));
+        // User(Worker) has 0 at first
+        assertEq(aToken.balanceOf(user), amountToWithdraw);
+        assertEq(reserveA, reserveB - transferedATokenShare);
+    }
 }
