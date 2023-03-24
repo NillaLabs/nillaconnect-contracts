@@ -5,7 +5,7 @@ import "OpenZeppelin/openzeppelin-contracts@4.7.3/contracts/token/ERC20/IERC20.s
 import "OpenZeppelin/openzeppelin-contracts@4.7.3/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "../contracts/ProxyAdminImpl.sol";
-import "../contracts/TransparentUpgradeableProxyImpl.sol";
+import "../contracts/TransparentUpgradeableProxyImplNative.sol";
 import "../contracts/lending_pools/CompoundNillaLendingPool.sol";
 
 import "../interfaces/ICToken.sol";
@@ -13,7 +13,7 @@ import "../interfaces/ICToken.sol";
 contract CompoundTest is Test {
     using SafeERC20 for IERC20;
 
-    TransparentUpgradeableProxyImpl public proxy;
+    TransparentUpgradeableProxyImplNative public proxy;
     address public impl;
     address public admin;
     address public user = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266;
@@ -40,25 +40,25 @@ contract CompoundTest is Test {
         admin = address(new ProxyAdminImpl());
         impl = address(new CompoundNillaLendingPool(comptroller, WETH));
 
-        proxy = new TransparentUpgradeableProxyImpl(
+        proxy = new TransparentUpgradeableProxyImplNative(
             impl,
             admin,
             abi.encodeWithSelector(
                 CompoundNillaLendingPool.initialize.selector,
                 address(cToken),
                 swapRouter,
-                address(bot),
+                bot,
                 "Compound - DAI",
                 "ncDAI",
                 1,
                 1,
                 1
-            )
+            ),
+            WETH
         );
 
         nilla = CompoundNillaLendingPool(address(proxy));
         baseToken = nilla.baseToken();
-
         baseToken.safeApprove(address(nilla), type(uint256).max);
 
         vm.label(address(nilla), "#### Nilla ####");
@@ -138,9 +138,44 @@ contract CompoundTest is Test {
         uint256 shares = nilla.balanceOf(user);
         uint256 withdrawFee = shares * 1 / 10_000;
 
-        vm.warp(block.timestamp + 1_000_000_000);
+        vm.roll(block.number + 20);
         nilla.redeem(shares, user);
         uint256 reserveAfter = nilla.reserves(address(cToken));
         assertEq(reserveAfter - reserveBefore, withdrawFee);
+    }
+
+    function testReinvest() public {
+        console.log("---------- TEST REINVEST ----------");
+        uint256 amount = 1e20;
+        deal(address(baseToken), user, amount);
+
+        uint256 cTokenBefore = cToken.balanceOf(address(nilla));
+        nilla.deposit(amount, user);
+        uint256 cTokenAfterDeposit = cToken.balanceOf(address(nilla));
+
+        vm.roll(block.number + 100);
+        vm.stopPrank();
+        startHoax(bot);
+
+        address[] memory _path = new address[](2);
+        _path[0] = address(nilla.COMP());
+        //_path[1] = address(WETH);
+        _path[1] = address(baseToken);
+        uint256 _deadline = block.timestamp + 1000;
+
+        uint256 compAmount = IERC20(nilla.COMP()).balanceOf(address(nilla));
+        uint256 minCompAmount = compAmount * 9 / 10;
+
+        uint256 botBalanceB = bot.balance;
+        nilla.reinvest(minCompAmount, minCompAmount * 1 / 10_000, _path, _deadline);
+        uint256 botBalanceA = bot.balance;
+        uint256 cTokenAfterReinvest = cToken.balanceOf(address(nilla));
+
+        console.log("LP balance in aave before deposit:", cTokenBefore);
+        console.log("LP balance in aave after deposit:", cTokenAfterDeposit);
+        console.log("LP balance in aave after reinvest:", cTokenAfterReinvest);
+        console.log("Balance in Bot Before:", botBalanceB);
+        console.log("Balance in Bot After:", botBalanceA);
+        console.log("Bot received:", botBalanceA - botBalanceB);
     }
 }
