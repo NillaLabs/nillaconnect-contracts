@@ -5,4 +5,3 @@
 __pycache__/
 *.py[cod]
 node_modules
-slither.config.json
