@@ -1,7 +1,7 @@
 import json
 
 from brownie import network, Contract
-from brownie import ProxyAdminImpl, YearnNillaVault, TransparentUpgradeableProxyImpl, NativeGatewayYearn
+from brownie import ProxyAdminImpl, YearnNillaVault, TransparentUpgradeableProxyImpl, NativeGatewayVault
 
 from scripts.utils.utils import *
 
@@ -42,7 +42,7 @@ def main():
         {'from': deployer}
     )
     proxy_vault = Contract.from_abi("YearnNillaVault", proxy_impl.address, impl.abi)
-    gateway = NativeGatewayYearn.deploy(WETH, {'from': deployer})
+    gateway = NativeGatewayVault.deploy(WETH, {'from': deployer})
 
     print('Proxy Vault:', proxy_vault)
     print('Gateway:', gateway)
