@@ -1,7 +1,0 @@
-{
-  "solc_remaps": [
-    "forge-std/=lib/forge-std/src/",
-    "OpenZeppelin/openzeppelin-contracts@4.7.3/=lib/openzeppelin-contracts/",
-    "OpenZeppelin/openzeppelin-contracts-upgradeable@4.7.3/=lib/openzeppelin-contracts-upgradeable/"
-  ]
-}
