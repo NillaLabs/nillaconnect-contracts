@@ -8,7 +8,7 @@ import "OpenZeppelin/openzeppelin-contracts@4.7.3/contracts/token/ERC20/utils/Sa
 import "../interfaces/INillaVault.sol";
 import "../interfaces/IWNative.sol";
 
-contract NativeGatewayYearn {
+contract NativeGatewayVault {
     using SafeERC20 for IERC20;
     IWNative immutable wNative;
 
