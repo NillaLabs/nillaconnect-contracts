@@ -12,7 +12,7 @@ import "../../interfaces/IYearnPartnerTracker.sol";
 contract YearnNillaVault is BaseNillaEarn {
     using SafeERC20 for IERC20;
 
-    address public PARTNER_ADDRESS = 0x70997970C51812dc3A010C7d01b50e0d17dc79C8; // MOCK-UP
+    address public PARTNER_ADDRESS = 0xC022E7Ab9BED4874B7879d5Beaa6De5e12160Fae; // MOCK-UP
 
     IYVToken public yvToken;
     IYearnPartnerTracker public yearnPartnerTracker;
@@ -21,7 +21,12 @@ contract YearnNillaVault is BaseNillaEarn {
     uint8 private _decimals;
 
     event Deposit(address indexed depositor, address indexed receiver, uint256 amount);
-    event Withdraw(address indexed withdrawer, address indexed receiver, uint256 amount, uint256 maxLoss);
+    event Withdraw(
+        address indexed withdrawer,
+        address indexed receiver,
+        uint256 amount,
+        uint256 maxLoss
+    );
     event SetNewPartnerAddress(address newAddress);
 
     function initialize(
@@ -75,7 +80,11 @@ contract YearnNillaVault is BaseNillaEarn {
         return receivedYVToken - depositFee;
     }
 
-    function redeem(uint256 _shares, address _receiver, uint256 _maxLoss) external nonReentrant returns (uint256) {
+    function redeem(
+        uint256 _shares,
+        address _receiver,
+        uint256 _maxLoss
+    ) external nonReentrant returns (uint256) {
         // gas saving
         IERC20 _baseToken = baseToken;
         IYVToken _yvToken = yvToken;
@@ -86,7 +95,7 @@ contract YearnNillaVault is BaseNillaEarn {
         reserves[address(_yvToken)] += withdrawFee;
         uint256 baseTokenBefore = _baseToken.balanceOf(address(this));
         // withdraw user's fund.
-        _yvToken.withdraw(_shares - withdrawFee,  _receiver, _maxLoss);
+        _yvToken.withdraw(_shares - withdrawFee, _receiver, _maxLoss);
         uint256 receivedBaseToken = _baseToken.balanceOf(address(this)) - baseTokenBefore;
         emit Withdraw(msg.sender, _receiver, receivedBaseToken, _maxLoss);
         return receivedBaseToken;

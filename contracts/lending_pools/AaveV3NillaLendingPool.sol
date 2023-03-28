@@ -55,20 +55,16 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
         _baseToken.safeApprove(IAToken(_aToken).POOL(), type(uint256).max);
         harvestFeeBPS = _harvestFeeBPS;
         swapRouter = IUniswapRouterV2(_swapRouter);
-        _decimals = IAToken(_aToken).decimals(); 
-        HARVEST_BOT = _harvestBot; 
+        _decimals = IAToken(_aToken).decimals();
+        HARVEST_BOT = _harvestBot;
         // AaveV3 gives Native to lender as a Rewards in Avalanche Chain.
         IERC20(WNATIVE).safeApprove(address(swapRouter), type(uint256).max);
     }
 
-    constructor(
-        address _rewardsController,
-        address _wNative,
-        address _aToken
-    ) {
+    constructor(address _rewardsController, address _wNative, address _aToken) {
         WNATIVE = IWNative(_wNative);
         REWARDSCONTROLLER = IRewardsController(_rewardsController);
-        POOL = IAaveLendingPoolV3(IAToken(_aToken).POOL());      
+        POOL = IAaveLendingPoolV3(IAToken(_aToken).POOL());
     }
 
     function decimals() public view virtual override returns (uint8) {
@@ -79,7 +75,7 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
         HARVEST_BOT = newBot;
         emit SetHarvestBot(newBot);
     }
-    
+
     function deposit(uint256 _amount, address _receiver) external nonReentrant returns (uint256) {
         // gas saving
         IERC20 _baseToken = baseToken;
@@ -140,12 +136,13 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
             // using shares for aToken
             uint256 aTokenShareBefore = _aToken.scaledBalanceOf(address(this));
             IERC20(_token).safeTransfer(msg.sender, _amount);
-            uint256 transferedATokenShare = aTokenShareBefore - _aToken.scaledBalanceOf(address(this));
+            uint256 transferedATokenShare = aTokenShareBefore -
+                _aToken.scaledBalanceOf(address(this));
             reserves[_token] -= transferedATokenShare;
             emit WithdrawReserve(msg.sender, _token, transferedATokenShare);
         }
     }
-    
+
     // Only available in Avalanche chain.
     function reinvest(uint256 _amountOutMin, address[] calldata _path, uint256 _deadline) external {
         require(msg.sender == HARVEST_BOT, "only harvest bot is allowed");
@@ -158,16 +155,25 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
         uint256 receivedWETH = _claimeRewards(_aToken, _wNative);
         require(receivedWETH > 0, "No rewards to harvest");
         // Calculate HARVEST_BOT's fee before swapping
-        uint256 botFee = receivedWETH * harvestFeeBPS / BPS;
+        uint256 botFee = (receivedWETH * harvestFeeBPS) / BPS;
         // swap WAVAX -> baseToken
         uint256 baseTokenBefore = _baseToken.balanceOf(address(this));
-        swapRouter.swapExactTokensForTokens(receivedWETH - botFee, _amountOutMin, _path, address(this), _deadline);
+        swapRouter.swapExactTokensForTokens(
+            receivedWETH - botFee,
+            _amountOutMin,
+            _path,
+            address(this),
+            _deadline
+        );
         uint256 receivedBase = _baseToken.balanceOf(address(this)) - baseTokenBefore;
         _reinvest(_wNative, address(_baseToken), botFee, receivedBase); // alredy sub botFee when swap()
     }
 
     // NOTE: internal function to avoid stack-too-deep
-    function _claimeRewards(IAToken _aToken, IWNative _wNative) internal returns(uint256 receivedWAVAX) {
+    function _claimeRewards(
+        IAToken _aToken,
+        IWNative _wNative
+    ) internal returns (uint256 receivedWAVAX) {
         uint256 WAVAXBefore = _wNative.balanceOf(address(this));
         address[] memory assets = new address[](1);
         assets[0] = address(_aToken);
@@ -177,9 +183,14 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
     }
 
     // NOTE: internal function to avoid stack-too-deep
-    function _reinvest(IWNative _wNative, address _baseToken, uint256 _botFee, uint256 _amount) internal {
+    function _reinvest(
+        IWNative _wNative,
+        address _baseToken,
+        uint256 _botFee,
+        uint256 _amount
+    ) internal {
         _wNative.withdraw(_botFee);
-        (bool _success, ) = payable(HARVEST_BOT).call{value: _botFee}("");
+        (bool _success, ) = payable(HARVEST_BOT).call{ value: _botFee }("");
         require(_success, "Failed to send Ethers to bot");
         // re-supply into pool
         POOL.supply(address(_baseToken), _amount, address(this), 0);
