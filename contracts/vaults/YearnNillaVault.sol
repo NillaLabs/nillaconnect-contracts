@@ -12,7 +12,7 @@ import "../../interfaces/IYearnPartnerTracker.sol";
 contract YearnNillaVault is BaseNillaEarn {
     using SafeERC20 for IERC20;
 
-    address public PARTNER_ADDRESS = 0xC022E7Ab9BED4874B7879d5Beaa6De5e12160Fae; // MOCK-UP
+    address public PARTNER_ADDRESS;
 
     IYVToken public yvToken;
     IYearnPartnerTracker public yearnPartnerTracker;
