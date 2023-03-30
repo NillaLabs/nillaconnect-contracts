@@ -8,3 +8,4 @@ node_modules
 brownie-config.yaml
 /.vscode
 .env
+.DS_Store
