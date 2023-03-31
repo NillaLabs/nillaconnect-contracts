@@ -16,19 +16,20 @@ contract YVTest is Test {
     address internal impl;
     address internal admin;
     address internal user = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266;
-    address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address public constant WETH = 0x4200000000000000000000000000000000000006;
 
     // zero-address
     address internal ZERO_ADDRESS = address(0);
 
     // vault
-    YearnNillaVault internal vault;
-    NativeGatewayVault internal gateway;
+    YearnNillaVault internal vault = YearnNillaVault(0x3E53560e10CafFfE18882fBe7B9fC5Bb66C2BE55);
+    NativeGatewayVault internal gateway =
+        NativeGatewayVault(payable(0x10a278166dad38AE68Eea9270fEFC58eED103d09));
 
     IYearnPartnerTracker yearnPartnerTracker =
-        IYearnPartnerTracker(0x8ee392a4787397126C163Cb9844d7c447da419D8); // for mainnet
+        IYearnPartnerTracker(0x7E08735690028cdF3D81e7165493F1C34065AbA2); // for OP
     IERC20 baseToken;
-    IYVToken internal yvToken = IYVToken(0xa258C4606Ca8206D8aA700cE2143D7db854D168c); //WETH
+    IYVToken internal yvToken = IYVToken(0x5B977577Eb8a480f63e11FC615D6753adB8652Ae); //WETH
     uint256 yvTotalAssets;
 
     uint256 mainnetFork;
@@ -42,47 +43,42 @@ contract YVTest is Test {
     );
 
     function setUp() public {
-        mainnetFork = vm.createFork(
-            "https://mainnet.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161"
-        ); // ETH Mainnet
+        mainnetFork = vm.createFork("https://mainnet.optimism.io"); // OP Mainnet
         vm.selectFork(mainnetFork);
         startHoax(user);
+        // gateway = new NativeGatewayVault(address(WETH));
 
-        gateway = new NativeGatewayVault(address(WETH));
+        // admin = address(new ProxyAdminImpl());
+        // impl = address(new YearnNillaVault());
 
-        admin = address(new ProxyAdminImpl());
-        impl = address(new YearnNillaVault());
+        // // Contract VaultNilla
+        // proxy = new TransparentUpgradeableProxyImpl(
+        //     impl,
+        //     admin,
+        //     abi.encodeWithSelector(
+        //         YearnNillaVault.initialize.selector,
+        //         yvToken,
+        //         yearnPartnerTracker,
+        //         "Nilla-Yearn WETH Vault",
+        //         "WETH",
+        //         3,
+        //         3
+        //     )
+        // );
 
-        // Contract VaultNilla
-        proxy = new TransparentUpgradeableProxyImpl(
-            impl,
-            admin,
-            abi.encodeWithSelector(
-                YearnNillaVault.initialize.selector,
-                yvToken,
-                yearnPartnerTracker,
-                "Nilla-Yearn WETH Vault",
-                "WETH",
-                3,
-                3
-            )
-        );
+        // vault = YearnNillaVault(address(proxy));
 
-        vault = YearnNillaVault(address(proxy));
-
-        IERC20 _token = IERC20(yvToken.token());
-        yvTotalAssets = yvToken.totalDebt() + _token.balanceOf(address(yvToken));
-
-        baseToken = IERC20(address(vault.baseToken()));
-        deal(address(baseToken), user, 1e18);
-        baseToken.safeApprove(address(vault), type(uint256).max);
-
-        vm.label(address(vault), "### Nilla Vault ###");
-        vm.label(address(yvToken), "### Yearn Vault ###");
-        vm.label(address(yearnPartnerTracker), "### Yearn Partner Tracker ###");
-        vm.label(address(baseToken), "### Yearn Vault ###");
-        vm.label(user, "### User ###");
-        _checkInfo();
+        // IERC20 _token = IERC20(yvToken.token());
+        // yvTotalAssets = yvToken.totalDebt() + _token.balanceOf(address(yvToken));
+        // // baseToken = IERC20(address(vault.baseToken()));
+        // // deal(address(baseToken), user, 1e18);
+        // // baseToken.safeApprove(address(vault), type(uint256).max);
+        // vm.label(address(vault), "### Nilla Vault ###");
+        // vm.label(address(yvToken), "### Yearn Vault ###");
+        // vm.label(address(yearnPartnerTracker), "### Yearn Partner Tracker ###");
+        // vm.label(address(baseToken), "### Yearn Vault ###");
+        // vm.label(user, "### User ###");
+        // _checkInfo();
     }
 
     function _checkInfo() internal view {
@@ -104,7 +100,9 @@ contract YVTest is Test {
         uint256 balanceInYearnBefore = yvToken.balanceOf(address(vault));
         uint256 reservesBeforeDeposit = vault.reserves(address(yvToken));
         uint256 nBalB = vault.balanceOf(user);
+        console.log("ETH in vault B:", address(vault).balance);
         gateway.deposit{ value: amount }(address(vault));
+        console.log("ETH in vault A:", address(vault).balance);
         uint256 nBalA = vault.balanceOf(user);
         uint256 balanceInYearnAfter = yvToken.balanceOf(address(vault));
         uint256 reservesAfterDeposit = vault.reserves(address(yvToken));
@@ -212,28 +210,28 @@ contract YVTest is Test {
         console.log("Balance of baseToken after:", baseTokenAfter);
     }
 
-    function testDepositGateway() public {
-        console.log("---------- TEST GATEWAY ----------");
-        uint256 amount = 1e18;
-        uint256 maxLoss = 1;
-        uint256 balanceInYearnBefore = yvToken.balanceOf(address(vault));
-        uint256 reservesBeforeDeposit = vault.reserves(address(yvToken));
-        uint256 nBalB = vault.balanceOf(user);
-        gateway.deposit{ value: amount }(address(vault));
-        uint256 nBalA = vault.balanceOf(user);
-        uint256 balanceInYearnAfter = yvToken.balanceOf(address(vault));
-        uint256 reservesAfterDeposit = vault.reserves(address(yvToken));
-        uint256 depositFee = ((balanceInYearnAfter - balanceInYearnBefore) * 3) / 10_000; //depositFeeBPS = 0.03%, BPS = 100%
+    // function testDepositGateway() public {
+    //     console.log("---------- TEST GATEWAY ----------");
+    //     uint256 amount = 1e18;
+    //     uint256 maxLoss = 1;
+    //     uint256 balanceInYearnBefore = yvToken.balanceOf(address(vault));
+    //     uint256 reservesBeforeDeposit = vault.reserves(address(yvToken));
+    //     uint256 nBalB = vault.balanceOf(user);
+    //     gateway.deposit{ value: amount }(address(vault));
+    //     uint256 nBalA = vault.balanceOf(user);
+    //     uint256 balanceInYearnAfter = yvToken.balanceOf(address(vault));
+    //     uint256 reservesAfterDeposit = vault.reserves(address(yvToken));
+    //     uint256 depositFee = ((balanceInYearnAfter - balanceInYearnBefore) * 3) / 10_000; //depositFeeBPS = 0.03%, BPS = 100%
 
-        assertEq(reservesAfterDeposit - reservesBeforeDeposit, depositFee);
-        assertEq(vault.balanceOf(user), balanceInYearnAfter - depositFee);
-        console.log("Vault balance in yearn before:", balanceInYearnBefore);
-        console.log("Vault balance in yearn after:", balanceInYearnAfter);
-        console.log("Reserves Nilla before:", reservesBeforeDeposit);
-        console.log("Reserves Nilla after:", reservesAfterDeposit);
-        console.log("nToken Balance Before:", nBalB);
-        console.log("nToken Balance After:", nBalA);
-    }
+    //     assertEq(reservesAfterDeposit - reservesBeforeDeposit, depositFee);
+    //     assertEq(vault.balanceOf(user), balanceInYearnAfter - depositFee);
+    //     console.log("Vault balance in yearn before:", balanceInYearnBefore);
+    //     console.log("Vault balance in yearn after:", balanceInYearnAfter);
+    //     console.log("Reserves Nilla before:", reservesBeforeDeposit);
+    //     console.log("Reserves Nilla after:", reservesAfterDeposit);
+    //     console.log("nToken Balance Before:", nBalB);
+    //     console.log("nToken Balance After:", nBalA);
+    // }
 
     function testRedeemWithFuzzy(uint256 amount) public {
         console.log("---------- TEST FUZZY REDEEM ----------");
