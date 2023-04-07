@@ -32,6 +32,7 @@ contract YearnNillaVault is BaseNillaEarn {
     function initialize(
         address _yvToken,
         address _yearnPartnerTracker,
+        address _multisig,
         string memory _name,
         string memory _symbol,
         uint16 _depositFeeBPS,
@@ -45,6 +46,8 @@ contract YearnNillaVault is BaseNillaEarn {
         baseToken = _baseToken;
         _baseToken.safeApprove(_yearnPartnerTracker, type(uint256).max);
         _decimals = IYVToken(_yvToken).decimals();
+
+        PARTNER_ADDRESS = _multisig;
     }
 
     function decimals() public view virtual override returns (uint8) {
