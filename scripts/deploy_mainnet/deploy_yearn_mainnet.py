@@ -17,9 +17,9 @@ data_address = json.load(f_address)
 # accounts.add(deployer.privateKey)
 deployer = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266'
 
-CHAIN_ID = '1'
-WETH = '0x4200000000000000000000000000000000000006'
+CHAIN_ID = set_network('mainnet')
 MULTISIGWALLET = '0x6f650AE486eFc27BeEFb8Dc84000F63acA99735f'
+WETH = data_address[CHAIN_ID]['WETH']
 PARTNER_TRACKER = data_address[CHAIN_ID]['YEARN_PARTNER_TRACKER']
 token_address = data_address[CHAIN_ID]['YEARN_VAULT']
 
