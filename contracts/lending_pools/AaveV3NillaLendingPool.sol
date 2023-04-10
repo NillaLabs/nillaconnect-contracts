@@ -61,10 +61,10 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
         IERC20(WNATIVE).safeApprove(address(swapRouter), type(uint256).max);
     }
 
-    constructor(address _rewardsController, address _wNative, address _aToken) {
+    constructor(address _rewardsController, address _wNative, address _pool) {
         WNATIVE = IWNative(_wNative);
         REWARDSCONTROLLER = IRewardsController(_rewardsController);
-        POOL = IAaveLendingPoolV3(IAToken(_aToken).POOL());
+        POOL = IAaveLendingPoolV3(_pool);
     }
 
     function decimals() public view virtual override returns (uint8) {
