@@ -26,8 +26,8 @@ contract CompoundNillaLendingPool is BaseNillaEarn {
 
     uint16 public harvestFeeBPS;
     address public HARVEST_BOT;
-    
-    IERC20 constant public COMP = IERC20(0xc00e94Cb662C3520282E6f5717214004A7f26888);
+
+    IERC20 public constant COMP = IERC20(0xc00e94Cb662C3520282E6f5717214004A7f26888);
 
     event Deposit(address indexed depositor, address indexed receiver, uint256 amount);
     event Withdraw(address indexed withdrawer, address indexed receiver, uint256 amount);
@@ -48,7 +48,7 @@ contract CompoundNillaLendingPool is BaseNillaEarn {
         cToken = ICToken(_cToken);
         swapRouter = IUniswapRouterV2(_swapRouter);
         harvestFeeBPS = _harvestFeeBPS;
-        HARVEST_BOT = _harvestBot; 
+        HARVEST_BOT = _harvestBot;
         IERC20 _baseToken = IERC20(ICToken(_cToken).underlying());
         baseToken = _baseToken;
         _baseToken.safeApprove(_cToken, type(uint256).max);
@@ -56,10 +56,7 @@ contract CompoundNillaLendingPool is BaseNillaEarn {
         _decimals = ICToken(_cToken).decimals();
     }
 
-    constructor(
-        address _comptroller,
-        address _wNative
-    ) {
+    constructor(address _comptroller, address _wNative) {
         COMPTROLLER = IComptroller(_comptroller);
         WNATIVE = IWNative(_wNative);
     }
@@ -111,14 +108,12 @@ contract CompoundNillaLendingPool is BaseNillaEarn {
         return receivedBaseToken;
     }
 
-    /**
-     * Reinvest() on Mainnet
-     * rewards: compound token
-     * COMPTROLLER.sol --> claimeReward() // around this name
-     * swap on either UniV2 or Sushi or UniV3 ; Check LQ.
-     * Follow the same logic as others reinvest(). :D
-     */
-    function reinvest(uint256 _amountOutMin, uint256 _amountOutMinForBot, address[] calldata _path, uint256 _deadline) external {
+    function reinvest(
+        uint256 _amountOutMin,
+        uint256 _amountOutMinForBot,
+        address[] calldata _path,
+        uint256 _deadline
+    ) external {
         require(msg.sender == HARVEST_BOT, "only harvest bot is allowed");
         require(_path[0] != address(cToken), "Asset to swap should not be cToken");
         // gas saving
@@ -131,7 +126,7 @@ contract CompoundNillaLendingPool is BaseNillaEarn {
         COMPTROLLER.claimComp(address(this));
         uint256 receivedComp = compound.balanceOf(address(this)) - compBefore;
         // calculate worker's fee before swapping
-        uint256 botFee = receivedComp * harvestFeeBPS / BPS;
+        uint256 botFee = (receivedComp * harvestFeeBPS) / BPS;
         {
             // send botFee to bot, swap COMP to WETH
             uint256 wethBefore = IERC20(_WNATIVE).balanceOf(address(this));
@@ -139,16 +134,28 @@ contract CompoundNillaLendingPool is BaseNillaEarn {
             address[] memory pathToNative = new address[](2);
             pathToNative[0] = address(compound);
             pathToNative[1] = address(_WNATIVE);
-            swapRouter.swapExactTokensForTokens(botFee, _amountOutMinForBot, pathToNative, address(this), _deadline);
+            swapRouter.swapExactTokensForTokens(
+                botFee,
+                _amountOutMinForBot,
+                pathToNative,
+                address(this),
+                _deadline
+            );
             uint256 receivedWeth = IERC20(_WNATIVE).balanceOf(address(this)) - wethBefore;
             // unwrap WETH to native
             _WNATIVE.withdraw(receivedWeth);
-            (bool _success, ) = payable(HARVEST_BOT).call{value: receivedWeth}("");
+            (bool _success, ) = payable(HARVEST_BOT).call{ value: receivedWeth }("");
             require(_success, "Failed to send Ethers to bot");
         }
         {
             uint256 baseTokenBefore = _baseToken.balanceOf(address(this));
-            swapRouter.swapExactTokensForTokens(receivedComp - botFee, _amountOutMin, _path, address(this), _deadline);
+            swapRouter.swapExactTokensForTokens(
+                receivedComp - botFee,
+                _amountOutMin,
+                _path,
+                address(this),
+                _deadline
+            );
             uint256 receivedBaseToken = _baseToken.balanceOf(address(this)) - baseTokenBefore;
             // re-supply into pool
             require(_cToken.mint(receivedBaseToken) == 0, "!mint");
