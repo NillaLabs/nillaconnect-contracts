@@ -6,7 +6,8 @@ from brownie import Contract, accounts
 from brownie import ProxyAdminImpl, AaveV3NillaLendingPool, TransparentUpgradeableProxyImplNative, NativeGateway
 from scripts.utils.utils import *
 
-network.priority_fee("2 gwei")
+network.gas_price("0.11 gwei")
+
 load_dotenv()
 
 CHAIN_ID = set_network('arbitrum')

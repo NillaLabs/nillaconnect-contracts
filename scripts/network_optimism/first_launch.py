@@ -6,7 +6,8 @@ from brownie import Contract, accounts
 from brownie import ProxyAdminImpl, AaveV2NillaLendingPool, AaveV3NillaLendingPool, CompoundNillaLendingPool, LidoNillaLiquidityStaking, YearnNillaVault, TransparentUpgradeableProxyImpl, TransparentUpgradeableProxyImplNative, NativeGateway, NativeGatewayVault
 from scripts.utils.utils import *
 
-network.priority_fee("2 gwei")
+network.gas_price("0.001 gwei")
+
 load_dotenv()
 
 CHAIN_ID = set_network('optimism')

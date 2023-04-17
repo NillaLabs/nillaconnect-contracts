@@ -6,7 +6,9 @@ from brownie import Contract, accounts
 from brownie import ProxyAdminImpl, AaveV3NillaLendingPool, TransparentUpgradeableProxyImplNative, NativeGateway
 from scripts.utils.utils import *
 
-network.priority_fee("2 gwei")
+network.max_fee("150 gwei")
+network.priority_fee("1 gwei")
+
 load_dotenv()
 
 CHAIN_ID = set_network('polygon')
