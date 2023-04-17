@@ -3,7 +3,7 @@ import os
 from dotenv import load_dotenv
 from eth_account import Account
 from brownie import Contract, accounts
-from brownie import ProxyAdminImpl, AaveV2NillaLendingPool, AaveV3NillaLendingPool, CompoundNillaLendingPool, LidoNillaLiquidityStaking, YearnNillaVault, TransparentUpgradeableProxyImpl, TransparentUpgradeableProxyImplNative, NativeGatewayVault
+from brownie import ProxyAdminImpl, AaveV2NillaLendingPool, AaveV3NillaLendingPool, CompoundNillaLendingPool, LidoNillaLiquidityStaking, YearnNillaVault, TransparentUpgradeableProxyImpl, TransparentUpgradeableProxyImplNative, NativeGateway, NativeGatewayVault
 from scripts.utils.utils import *
 
 network.priority_fee("2 gwei")
@@ -42,9 +42,10 @@ MULTISIG_WALLET = '0x6f650AE486eFc27BeEFb8Dc84000F63acA99735f' # NOTE Change lat
 
 
 def main():
-    # NOTE: Can globally deploy once for each network!
+    # Can globally deploy once for each network!
     admin = ProxyAdminImpl.deploy({'from': deployer})
-    gateway = NativeGatewayVault.deploy(WETH, {'from': deployer})
+    gateway = NativeGateway.deploy(WETH, {'from': deployer})
+    gateway_vault = NativeGatewayVault.deploy(WETH, {'from': deployer})
 
     # ---------- Deploy Yearn's ----------
     impl_yearn = YearnNillaVault.deploy({'from': deployer})
