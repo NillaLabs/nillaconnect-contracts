@@ -23,9 +23,11 @@ yearn_address = data_address[CHAIN_ID]['YEARN_VAULT']
 WETH = data_address[CHAIN_ID]['WETH']
 AAVE_V3_POOL = data_address[CHAIN_ID]['AAVEV3_POOL']
 AAVE_V3_REWARDS_CONTROLLER = data_address[CHAIN_ID]['AAVEV3_REWARDS_CONTROLLER']
-COMPTROLLER = data_address[CHAIN_ID]['COMPTROLLER']
-SUSHISWAP_ROUTER = data_address[CHAIN_ID]['SUSHISWAP_ROUTER']
 YEARN_PARTNER_TRACKER = data_address[CHAIN_ID]['YEARN_PARTNER_TRACKER']
+
+# NOTE: Leave COMPOUND out of scope for Beta.
+# COMPTROLLER = data_address[CHAIN_ID]['COMPTROLLER']
+# SUSHISWAP_ROUTER = data_address[CHAIN_ID]['SUSHISWAP_ROUTER']
 
 DEPOSIT_FEE_BPS = 3
 WITHDRAW_FEE_BPS = 3
@@ -87,28 +89,29 @@ def main():
     lido_liquidstaking = Contract.from_abi("LidoNillaLiquidityStaking", proxy_impl_lido.address, impl_lido.abi)
     print('Lido:-',lido_liquidstaking, '\n -----------------------------------------------------')
 
+    # NOTE: Leave COMPOUND out of scope for Beta.
     # ---------- Deploy Compound's ----------
-    impl_compound = CompoundNillaLendingPool.deploy(COMPTROLLER, WETH, {'from': deployer})
-    for token in compound_address:
-        compound_initilize_encoded = encode_function_data(
-            impl_compound.initialize,
-            compound_address[token],
-            SUSHISWAP_ROUTER,
-            HARVEST_BOT,
-            f"{token} Compound-Nilla LP",
-            "nc" + str(token),
-            DEPOSIT_FEE_BPS,
-            WITHDRAW_FEE_BPS,
-            HARVEST_FEE_BPS
-        )
-        proxy_impl_compound = TransparentUpgradeableProxyImpl.deploy(
-            impl_compound,
-            admin,
-            compound_initilize_encoded,
-            {'from': deployer}
-        )
-        compound_lp = Contract.from_abi("CompoundNillaLendingPool", proxy_impl_compound.address, impl_compound.abi)
-        print(f'Compound:- Proxy LP {token}', compound_lp, '\n -----------------------------------------------------')
+    # impl_compound = CompoundNillaLendingPool.deploy(COMPTROLLER, WETH, {'from': deployer})
+    # for token in compound_address:
+    #     compound_initilize_encoded = encode_function_data(
+    #         impl_compound.initialize,
+    #         compound_address[token],
+    #         SUSHISWAP_ROUTER,
+    #         HARVEST_BOT,
+    #         f"{token} Compound-Nilla LP",
+    #         "nc" + str(token),
+    #         DEPOSIT_FEE_BPS,
+    #         WITHDRAW_FEE_BPS,
+    #         HARVEST_FEE_BPS
+    #     )
+    #     proxy_impl_compound = TransparentUpgradeableProxyImpl.deploy(
+    #         impl_compound,
+    #         admin,
+    #         compound_initilize_encoded,
+    #         {'from': deployer}
+    #     )
+    #     compound_lp = Contract.from_abi("CompoundNillaLendingPool", proxy_impl_compound.address, impl_compound.abi)
+    #     print(f'Compound:- Proxy LP {token}', compound_lp, '\n -----------------------------------------------------')
     
     # ---------- Deploy AAVE V2's ----------
     impl_aave_v2 = AaveV2NillaLendingPool.deploy({'from': deployer})
