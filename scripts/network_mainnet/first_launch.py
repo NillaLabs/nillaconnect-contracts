@@ -87,7 +87,7 @@ def main():
         {'from': deployer}
     )
     lido_liquidstaking = Contract.from_abi("LidoNillaLiquidityStaking", proxy_impl_lido.address, impl_lido.abi)
-    print('Lido:-',lido_liquidstaking, '\n -----------------------------------------------------')
+    print('Lido:-', lido_liquidstaking, '\n -----------------------------------------------------')
 
     # NOTE: Leave COMPOUND out of scope for Beta.
     # ---------- Deploy Compound's ----------
