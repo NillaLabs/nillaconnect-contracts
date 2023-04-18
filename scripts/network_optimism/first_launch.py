@@ -52,7 +52,7 @@ def main():
             YEARN_PARTNER_TRACKER,
             MULTISIG_WALLET,
             f"{token} Yearn-Nilla Vault",
-            "NYV" + str(token),
+            "nyv" + str(token),
             DEPOSIT_FEE_BPS,
             WITHDRAW_FEE_BPS
         )
