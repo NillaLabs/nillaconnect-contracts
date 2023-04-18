@@ -16,20 +16,20 @@ CHAIN_ID = set_network('mainnet')
 f_address = open('./scripts/constants/address.json', )
 data_address = json.load(f_address)
 
-aave_v2_address = data_address[CHAIN_ID]['AAVEV2_ATOKEN']
-aave_v3_address = data_address[CHAIN_ID]['AAVEV3_ATOKEN']
-compound_address = data_address[CHAIN_ID]['COMPOUND_CTOKEN']
+# aave_v2_address = data_address[CHAIN_ID]['AAVEV2_ATOKEN']
+# aave_v3_address = data_address[CHAIN_ID]['AAVEV3_ATOKEN']
+# compound_address = data_address[CHAIN_ID]['COMPOUND_CTOKEN']
 lido_address = data_address[CHAIN_ID]['LIDO']
 yearn_address = data_address[CHAIN_ID]['YEARN_VAULT']
 
 WETH = data_address[CHAIN_ID]['WETH']
-AAVE_V3_POOL = data_address[CHAIN_ID]['AAVEV3_POOL']
-AAVE_V3_REWARDS_CONTROLLER = data_address[CHAIN_ID]['AAVEV3_REWARDS_CONTROLLER']
+# AAVE_V3_POOL = data_address[CHAIN_ID]['AAVEV3_POOL']
+# AAVE_V3_REWARDS_CONTROLLER = data_address[CHAIN_ID]['AAVEV3_REWARDS_CONTROLLER']
 YEARN_PARTNER_TRACKER = data_address[CHAIN_ID]['YEARN_PARTNER_TRACKER']
 
 # NOTE: Leave COMPOUND out of scope for Beta.
 # COMPTROLLER = data_address[CHAIN_ID]['COMPTROLLER']
-SUSHISWAP_ROUTER = data_address[CHAIN_ID]['SUSHISWAP_ROUTER']
+# SUSHISWAP_ROUTER = data_address[CHAIN_ID]['SUSHISWAP_ROUTER']
 
 DEPOSIT_FEE_BPS = 3
 WITHDRAW_FEE_BPS = 3
@@ -60,7 +60,7 @@ def main():
             YEARN_PARTNER_TRACKER,
             MULTISIG_WALLET,
             f"{token} Yearn-Nilla Vault",
-            "NYV" + str(token),
+            "nyv" + str(token),
             DEPOSIT_FEE_BPS,
             WITHDRAW_FEE_BPS
         )
@@ -116,49 +116,49 @@ def main():
     #     print(f'Compound:- Proxy LP {token}', compound_lp, '\n -----------------------------------------------------')
     
     # ---------- Deploy AAVE V2's ----------
-    impl_aave_v2 = AaveV2NillaLendingPool.deploy({'from': deployer})
-    for token in aave_v2_address:
-        aave_v2_initilize_encoded = encode_function_data(
-            impl_aave_v2.initialize,
-            aave_v2_address[token],
-            f"{token} AAVE V2-Nilla LP",
-            "na" + str(token),
-            DEPOSIT_FEE_BPS,
-            WITHDRAW_FEE_BPS
-        )
-        proxy_impl_aave_v2 = TransparentUpgradeableProxyImpl.deploy(
-            impl_aave_v2,
-            admin,
-            aave_v2_initilize_encoded,
-            {'from': deployer}
-        )
-        aave_v2_lp = Contract.from_abi("AaveV2NillaLendingPool", proxy_impl_aave_v2.address, impl_aave_v2.abi)
-        print(f'AAVE V2:- Proxy LP {token}', aave_v2_lp, '\n -----------------------------------------------------')
+    # impl_aave_v2 = AaveV2NillaLendingPool.deploy({'from': deployer})
+    # for token in aave_v2_address:
+    #     aave_v2_initilize_encoded = encode_function_data(
+    #         impl_aave_v2.initialize,
+    #         aave_v2_address[token],
+    #         f"{token} AAVE V2-Nilla LP",
+    #         "na" + str(token),
+    #         DEPOSIT_FEE_BPS,
+    #         WITHDRAW_FEE_BPS
+    #     )
+    #     proxy_impl_aave_v2 = TransparentUpgradeableProxyImpl.deploy(
+    #         impl_aave_v2,
+    #         admin,
+    #         aave_v2_initilize_encoded,
+    #         {'from': deployer}
+    #     )
+    #     aave_v2_lp = Contract.from_abi("AaveV2NillaLendingPool", proxy_impl_aave_v2.address, impl_aave_v2.abi)
+    #     print(f'AAVE V2:- Proxy LP {token}', aave_v2_lp, '\n -----------------------------------------------------')
 
     # ---------- Deploy AAVE V3's ----------
-    impl_aave_v3 = AaveV3NillaLendingPool.deploy(
-        AAVE_V3_REWARDS_CONTROLLER,
-        WETH,
-        AAVE_V3_POOL,
-        {'from': deployer})
-    for token in aave_v3_address:
-        aave_v3_initilize_encoded = encode_function_data(
-            impl_aave_v3.initialize,
-            aave_v3_address[token],
-            SUSHISWAP_ROUTER,
-            HARVEST_BOT,
-            f"{token} AAVE V3-Nilla LP",
-            "na" + str(token),
-            DEPOSIT_FEE_BPS,
-            WITHDRAW_FEE_BPS,
-            HARVEST_FEE_BPS
-        )
-        proxy_impl_aave_v3 = TransparentUpgradeableProxyImplNative.deploy(
-            impl_aave_v3,
-            admin,
-            aave_v3_initilize_encoded,
-            WETH,
-            {'from': deployer}
-        )
-        aave_v3_lp = Contract.from_abi("AaveV3NillaLendingPool", proxy_impl_aave_v3.address, impl_aave_v3.abi)
-        print(f'AAVE V3:- Proxy LP {token}', aave_v3_lp, '\n -----------------------------------------------------')
+    # impl_aave_v3 = AaveV3NillaLendingPool.deploy(
+    #     AAVE_V3_REWARDS_CONTROLLER,
+    #     WETH,
+    #     AAVE_V3_POOL,
+    #     {'from': deployer})
+    # for token in aave_v3_address:
+    #     aave_v3_initilize_encoded = encode_function_data(
+    #         impl_aave_v3.initialize,
+    #         aave_v3_address[token],
+    #         SUSHISWAP_ROUTER,
+    #         HARVEST_BOT,
+    #         f"{token} AAVE V3-Nilla LP",
+    #         "na" + str(token),
+    #         DEPOSIT_FEE_BPS,
+    #         WITHDRAW_FEE_BPS,
+    #         HARVEST_FEE_BPS
+    #     )
+    #     proxy_impl_aave_v3 = TransparentUpgradeableProxyImplNative.deploy(
+    #         impl_aave_v3,
+    #         admin,
+    #         aave_v3_initilize_encoded,
+    #         WETH,
+    #         {'from': deployer}
+    #     )
+    #     aave_v3_lp = Contract.from_abi("AaveV3NillaLendingPool", proxy_impl_aave_v3.address, impl_aave_v3.abi)
+    #     print(f'AAVE V3:- Proxy LP {token}', aave_v3_lp, '\n -----------------------------------------------------')
