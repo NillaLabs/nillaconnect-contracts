@@ -2,7 +2,6 @@ import click
 from brownie import interface, chain, network, web3, Wei
 from eth_utils import is_checksum_address
 
-# network.priority_fee("2 gwei")
 network.gas_price("1 gwei")
 
 UNISWAP_ADDRESS = "0xE592427A0AEce92De3Edee1F18E0157C05861564"
