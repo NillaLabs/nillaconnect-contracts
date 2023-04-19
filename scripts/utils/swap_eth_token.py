@@ -51,7 +51,7 @@ def main():
         # amounts  = uniswap.getAmountsOut(amount_in_wei, path)
         click.secho(f"swapExactETHForTokens...", fg='yellow')
         swap_amounts = uniswap.exactInputSingle(
-            [[
+            [
                 weth,
                 token_out,
                 3000,
@@ -60,7 +60,7 @@ def main():
                 amount_in_wei,
                 0,  #amountOutMin; for test only, might have to calculate off-chain with SDK when doing with mainnet
                 0
-            ]],
+            ],
             {
                 'from': sender,
                 'value': amount_in_wei
