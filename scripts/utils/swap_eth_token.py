@@ -2,9 +2,9 @@ import click
 from brownie import interface, chain, network, web3, Wei
 from eth_utils import is_checksum_address
 
-UNISWAP_ADDRESS = "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"
+UNISWAP_ADDRESS = "0xE592427A0AEce92De3Edee1F18E0157C05861564"
 
-network.priority_fee("2 gwei")
+network.gas_price("0.001 gwei")
 
 def get_address(msg: str, default: str = None) -> str:
     val = click.prompt(msg, default=default)
@@ -26,8 +26,8 @@ def get_address(msg: str, default: str = None) -> str:
         val = click.prompt(msg)
 
 def main():
-    uniswap = interface.IUniswapRouterV2(UNISWAP_ADDRESS)
-    weth_address = uniswap.WETH()
+    uniswap = interface.IUniswapRouterV3(UNISWAP_ADDRESS)
+    weth_address = uniswap.WETH9()
     weth = interface.IWNative(weth_address) 
 
     sender = get_address("Sender", default="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
@@ -44,13 +44,18 @@ def main():
         click.secho("Done Deposit!", fg='green')
         click.secho(deposit)
     else:        
-        path = [weth, token_out]
-        amounts  = uniswap.getAmountsOut(amount_in_wei, path)
+        # path = [weth, token_out]
+        # amounts  = uniswap.getAmountsOut(amount_in_wei, path)
         click.secho(f"swapExactETHForTokens...", fg='yellow')
-        swap_amounts = uniswap.swapExactETHForTokens(amounts[1],
-                                                     path,
-                                                     receiver,
-                                                     chain.time() + 1000000000000,
-                                                     {'from': sender, 'value': amounts[0]})
+        swap_amounts = uniswap.exactInputSingle([[
+            weth,
+            token_out,
+            3000,
+            receiver,
+            chain.time() + 1000000000000,
+            amount_in_wei,
+            0, #amountOutMin; for test only, might have to calculate off-chain with SDK when doing with mainnet
+            0
+        ]], {'from': sender, 'value': amount_in_wei})
         click.secho("Done Swap!", fg='green')
         click.secho(swap_amounts)
