@@ -1,2 +1,1 @@
-# mvp-lending-pool
-Smart Contract for lending 
+# NillaConnect Smart Contracts
