@@ -14,6 +14,9 @@ CHAIN_ID = set_network('optimism')
 
 f_address = open('./scripts/constants/address.json', )
 admin_abi = json.load(open('./build/contracts/ProxyadminImpl.json', ))
+aave_v3_no_rewards_abi = json.load(
+    open('./build/contracts/AaveV3NillaLendingPoolNoRewards.json', ))
+yearn_abi = json.load(open('./build/contracts/YearnNillaVault.json', ))
 
 data_address = json.load(f_address)
 
@@ -47,7 +50,9 @@ def main():
     # gateway_vault = NativeGatewayVault.deploy(WETH, {'from': accounts[0]})
 
     # ---------- Deploy Yearn's ----------
-    # impl_yearn = YearnNillaVault.deploy({'from': accounts[0]})
+    # impl_yearn = Contract.from_abi(
+    #     "YearnNillaVault", "0xA7397Afe71FDa96B2656Cf9FAFf72955952DeD32",
+    #     yearn_abi['abi'])
     # for token in yearn_address:
     #     yearn_initilize_encoded = encode_function_data(
     #         impl_yearn.initialize, yearn_address[token], YEARN_PARTNER_TRACKER,
@@ -62,8 +67,10 @@ def main():
     #           '\n -----------------------------------------------------')
 
     # ---------- Deploy AAVE V3's ----------
-    impl_aave_v3_no_rewards = AaveV3NillaLendingPoolNoRewards.deploy(
-        WETH, AAVE_V3_POOL, {'from': accounts[0]})
+    impl_aave_v3_no_rewards = Contract.from_abi(
+        "AaveV3NillaLendingPoolNoRewards",
+        "0xF4B45771953eed73ce3c99c51C8f263cC0917264",
+        aave_v3_no_rewards_abi['abi'])
 
     for token in aave_v3_address:
         aave_v3_initilize_encoded = encode_function_data(
