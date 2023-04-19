@@ -17,4 +17,6 @@ interface IUniswapRouterV3 {
     function exactInputSingle(
         ExactInputSingleParams calldata params
     ) external returns (uint256 amountOut);
+
+    function WETH9() external view returns (address weth9);
 }
