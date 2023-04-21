@@ -112,7 +112,7 @@ contract AaveV3NillaLendingPoolNoRewards is BaseNillaEarn {
         if (principal != 0) {
             // get current balance from current shares
             uint256 currentBal = balanceOf(_receiver).mulDiv(
-                reserveNormalizedIncome, // gas opt.
+                reserveNormalizedIncome,
                 RAY,
                 Math.Rounding.Down
             );
