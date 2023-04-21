@@ -64,14 +64,18 @@ contract AaveV3NillaLendingPoolNoRewards is BaseNillaEarn {
         uint256 reserveNormalizedIncome = POOL.getReserveNormalizedIncome(address(_baseToken));
         // calculate performance fee
         uint256 depositFee;
+        // get current balance from current shares
         if (principal != 0) {
             uint256 currentBal = balanceOf(_receiver).mulDiv(
                 reserveNormalizedIncome,
                 RAY,
                 Math.Rounding.Down
             );
+            // calculate profit from current balance compared to latest known principal
             uint256 profit = currentBal > principal ? (currentBal - principal) : 0;
+            // calculate performance fee
             uint256 fee = profit.mulDiv(performanceFeeBPS, BPS);
+            // sum fee into the withdrawFee
             depositFee = fee.mulDiv(RAY, reserveNormalizedIncome, Math.Rounding.Down);
         }
         // transfer fund.
@@ -106,13 +110,17 @@ contract AaveV3NillaLendingPoolNoRewards is BaseNillaEarn {
         // calculate performance fee
         uint256 withdrawFee;
         if (principal != 0) {
+            // get current balance from current shares
             uint256 currentBal = balanceOf(_receiver).mulDiv(
                 reserveNormalizedIncome, // gas opt.
                 RAY,
                 Math.Rounding.Down
             );
+            // calculate profit from current balance compared to latest known principal
             uint256 profit = currentBal > principal ? (currentBal - principal) : 0;
+            // calculate performance fee
             uint256 fee = profit.mulDiv(performanceFeeBPS, BPS);
+            // sum fee into the withdrawFee
             withdrawFee = fee.mulDiv(RAY, reserveNormalizedIncome, Math.Rounding.Down);
         }
         // burn user's shares
