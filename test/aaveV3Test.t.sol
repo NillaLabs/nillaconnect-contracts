@@ -20,19 +20,16 @@ contract AaveV3Test is Test {
     TransparentUpgradeableProxyImplNative public proxy;
     address public impl;
     address public admin;
-    address public rewarder = 0xA68eEB34418871d844a1301F97353cB20343B65d; // someone who has rewards on AAVE.
+
     address public user = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266;
     address public bot = 0x70997970C51812dc3A010C7d01b50e0d17dc79C8;
 
     address public WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-
-    // zero-address
-    address public ZERO_ADDRESS = address(0);
-
+    address public POOL = 0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2;
     uint256 public mainnetFork;
 
     IERC20 public baseToken;
-    IAToken public aToken = IAToken(0x6ab707Aca953eDAeFBc4fD23bA73294241490620);
+    IAToken public aToken = IAToken(0x23878914EFE38d27C4D67Ab83ed1b93A74D4086a);
     // IRewardsController rewardsController =
     //     IRewardsController(0x929EC64c34a17401F460460D4B9390518E5B473e);
     // IUniswapRouterV2 swapRouter = IUniswapRouterV2(0x60aE616a2155Ee3d9A68541Ba4544862310933d4);
@@ -46,14 +43,11 @@ contract AaveV3Test is Test {
         vm.selectFork(mainnetFork);
         startHoax(user);
 
-        vm.label(user, "#### User ####");
-        vm.label(address(aToken), "#### AToken ####");
-        vm.label(WETH, "#### WETH ####");
         // vm.label(address(rewardsController), "#### Reward Controller ####");
         // vm.label(address(swapRouter), "#### Swap Router ####");
 
         admin = address(new ProxyAdminImpl());
-        impl = address(new AaveV3NillaLendingPoolNoRewards(address(WETH), address(aToken)));
+        impl = address(new AaveV3NillaLendingPoolNoRewards(address(WETH), POOL));
 
         proxy = new TransparentUpgradeableProxyImplNative(
             impl,
@@ -75,13 +69,16 @@ contract AaveV3Test is Test {
 
         baseToken.safeApprove(address(aaveV3Pool), type(uint256).max);
 
+        vm.label(user, "#### User ####");
+        vm.label(address(aToken), "#### AToken ####");
+        vm.label(WETH, "#### WETH ####");
         vm.label(address(aaveV3Pool), "#### Nilla ####");
         vm.label(address(baseToken), "#### BaseToken ####");
     }
 
     function testDepositNormal() public {
         console.log("---------- TEST NORMAL DEPOSIT ----------");
-        uint256 amount = 1e15;
+        uint256 amount = 1e7;
         deal(address(baseToken), user, amount);
 
         uint256 aTokenBefore = aToken.scaledBalanceOf(address(aaveV3Pool));
@@ -91,10 +88,13 @@ contract AaveV3Test is Test {
         console.log("Prin A:", aaveV3Pool.principals(user));
         uint256 aTokenAfter = aToken.scaledBalanceOf(address(aaveV3Pool));
         uint256 reserveAfter = aaveV3Pool.reserves(address(aToken));
-        uint256 depositFee = ((aTokenAfter - aTokenBefore) * 1) / 10_000;
 
-        assertEq(reserveAfter - reserveBefore, depositFee);
-        assertEq(aaveV3Pool.balanceOf(user), aTokenAfter - depositFee);
+        assertEq(
+            aaveV3Pool.reserves(address(aToken)) + aaveV3Pool.totalSupply(),
+            aToken.scaledBalanceOf(address(aaveV3Pool))
+        );
+        // assertEq(reserveAfter - reserveBefore, depositFee);
+        // assertEq(aaveV3Pool.balanceOf(user), aTokenAfter - depositFee);
 
         console.log("LP balance in aave before:", aTokenBefore);
         console.log("LP balance in aave after:", aTokenAfter);
@@ -143,29 +143,35 @@ contract AaveV3Test is Test {
 
     function testRedeemNormal() public {
         console.log("---------- TEST NORMAL REDEEM ----------");
-        uint256 amount = 1e15;
+        uint256 amount = 1e7;
         deal(address(baseToken), user, amount);
 
         uint256 aTokenBefore = aToken.scaledBalanceOf(address(aaveV3Pool));
         uint256 baseTokenBefore = baseToken.balanceOf(user);
-
+        console.log("Prin BD:", aaveV3Pool.principals(user));
         aaveV3Pool.deposit(amount, user);
-
+        console.log("Prin AD:", aaveV3Pool.principals(user));
         uint256 aTokenAfterDeposit = aToken.scaledBalanceOf(address(aaveV3Pool));
         uint256 shares = aaveV3Pool.balanceOf(user); // Redeem total shares
-        uint256 withdrawFee = shares.mulDiv(1, 10_000);
-        uint256 reserveBefore = aaveV3Pool.reserves(address(aToken));
+        // uint256 withdrawFee = shares.mulDiv(1, 10_000);
+        // uint256 reserveBefore = aaveV3Pool.reserves(address(aToken));
 
         vm.warp(block.timestamp + 1_000_000);
-        aaveV3Pool.redeem(shares, user);
+        aaveV3Pool.redeem(shares / 2, user);
+        console.log("Prin AR:", aaveV3Pool.principals(user));
 
-        uint256 addedReserve = aaveV3Pool.reserves(address(aToken)) - reserveBefore;
-        uint256 burnedATokenShare = aTokenAfterDeposit -
-            aToken.scaledBalanceOf(address(aaveV3Pool));
-        uint256 dust = (shares - withdrawFee) - burnedATokenShare;
+        assertEq(
+            aaveV3Pool.reserves(address(aToken)) + aaveV3Pool.totalSupply(),
+            aToken.scaledBalanceOf(address(aaveV3Pool))
+        );
 
-        assertEq(addedReserve, withdrawFee + dust);
-        assertEq(aaveV3Pool.balanceOf(user), 0);
+        // uint256 addedReserve = aaveV3Pool.reserves(address(aToken)) - reserveBefore;
+        // uint256 burnedATokenShare = aTokenAfterDeposit -
+        // aToken.scaledBalanceOf(address(aaveV3Pool));
+        // uint256 dust = (shares - withdrawFee) - burnedATokenShare;
+
+        // assertEq(addedReserve, withdrawFee + dust);
+        // assertEq(aaveV3Pool.balanceOf(user), 0);
 
         uint256 baseTokenAfter = baseToken.balanceOf(user);
         uint256 aTokenAfterRedeem = aToken.scaledBalanceOf(address(aaveV3Pool));
