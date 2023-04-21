@@ -31,9 +31,9 @@ contract AaveV2NillaLendingPool is BaseNillaEarn {
         string memory _symbol,
         uint16 _depositFeeBPS,
         uint16 _withdrawFeeBPS,
-        uint16 _principalFeeBPS
+        uint16 _performanceFeeBPS
     ) external {
-        __initialize__(_name, _symbol, _depositFeeBPS, _withdrawFeeBPS, _principalFeeBPS);
+        __initialize__(_name, _symbol, _depositFeeBPS, _withdrawFeeBPS, _performanceFeeBPS);
         lendingPool = IAaveLendingPoolV2(IAToken(_aToken).POOL());
         aToken = IAToken(_aToken);
         IERC20 _baseToken = IERC20(IAToken(_aToken).UNDERLYING_ASSET_ADDRESS());

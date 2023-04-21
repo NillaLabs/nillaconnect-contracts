@@ -37,9 +37,9 @@ contract YearnNillaVault is BaseNillaEarn {
         string memory _symbol,
         uint16 _depositFeeBPS,
         uint16 _withdrawFeeBPS,
-        uint16 _principalFeeBPS
+        uint16 _performanceFeeBPS
     ) external {
-        __initialize__(_name, _symbol, _depositFeeBPS, _withdrawFeeBPS, _principalFeeBPS);
+        __initialize__(_name, _symbol, _depositFeeBPS, _withdrawFeeBPS, _performanceFeeBPS);
         yvToken = IYVToken(_yvToken);
         yearnPartnerTracker = IYearnPartnerTracker(_yearnPartnerTracker);
 
