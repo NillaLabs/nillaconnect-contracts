@@ -65,7 +65,7 @@ contract AaveV3NillaLendingPoolNoRewards is BaseNillaEarn {
         // calculate performance fee
         uint256 depositFee;
         if (principal != 0) {
-            uint256 currentBal = balanceOf(receiver).mulDiv(
+            uint256 currentBal = balanceOf(_receiver).mulDiv(
                 reserveNormalizedIncome,
                 RAY,
                 Math.Rounding.Down
@@ -106,7 +106,7 @@ contract AaveV3NillaLendingPoolNoRewards is BaseNillaEarn {
         // calculate performance fee
         uint256 withdrawFee;
         if (principal != 0) {
-            uint256 currentBal = balanceOf(receiver).mulDiv(
+            uint256 currentBal = balanceOf(_receiver).mulDiv(
                 reserveNormalizedIncome, // gas opt.
                 RAY,
                 Math.Rounding.Down
