@@ -63,7 +63,7 @@ contract LidoNillaLiquidityStaking is BaseNillaEarn {
     function redeem(
         uint256 _shares,
         address _receiver,
-        uint256 minAmount
+        uint256 _minAmount
     ) external nonReentrant returns (uint256) {
         // gas saving
         IstETH _stETH = stETH;
@@ -80,7 +80,7 @@ contract LidoNillaLiquidityStaking is BaseNillaEarn {
             1, // index of stETH in Curve Pool
             0, // index of ETH in Curve Pool
             amount,
-            minAmount
+            _minAmount
         );
         uint256 receivedETH = address(this).balance - ETHBefore;
         (bool success, ) = payable(_receiver).call{ value: receivedETH }("");
