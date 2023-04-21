@@ -36,9 +36,10 @@ contract AaveV3NillaLendingPoolNoRewards is BaseNillaEarn {
         string calldata _name,
         string calldata _symbol,
         uint16 _depositFeeBPS,
-        uint16 _withdrawFeeBPS
+        uint16 _withdrawFeeBPS,
+        uint16 _performanceFeeBPS
     ) external {
-        __initialize__(_name, _symbol, _depositFeeBPS, _withdrawFeeBPS);
+        __initialize__(_name, _symbol, _depositFeeBPS, _withdrawFeeBPS, _performanceFeeBPS);
         aToken = IAToken(_aToken);
         IERC20 _baseToken = IERC20(IAToken(_aToken).UNDERLYING_ASSET_ADDRESS());
         baseToken = _baseToken;
@@ -59,6 +60,20 @@ contract AaveV3NillaLendingPoolNoRewards is BaseNillaEarn {
         // gas saving
         IERC20 _baseToken = baseToken;
         IAToken _aToken = aToken;
+        uint256 principal = principals[_receiver];
+        uint256 reserveNormalizedIncome = POOL.getReserveNormalizedIncome(_baseToken);
+        // calculate performance fee
+        uint256 depositFee;
+        if (principal != 0) {
+            uint256 currentBal = balanceOf(receiver).mulDiv(
+                reserveNormalizedIncome,
+                RAY,
+                Math.Rounding.Down
+            );
+            uint256 profit = currentBal > principal ? (currentBal - principal) : 0;
+            uint256 fee = profit.mulDiv(performanceFeeBPS, BPS);
+            depositFee = fee.mulDiv(RAY, reserveNormalizedIncome, Math.Rounding.Down);
+        }
         // transfer fund.
         uint256 baseTokenBefore = _baseToken.balanceOf(address(this));
         _baseToken.safeTransferFrom(msg.sender, address(this), _amount);
@@ -68,9 +83,15 @@ contract AaveV3NillaLendingPoolNoRewards is BaseNillaEarn {
         POOL.supply(address(_baseToken), receivedBaseToken, address(this), 0);
         uint256 receivedAToken = _aToken.scaledBalanceOf(address(this)) - aTokenShareBefore;
         // collect protocol's fee.
-        uint256 depositFee = receivedAToken.mulDiv(depositFeeBPS, BPS);
+        depositFee += receivedAToken.mulDiv(depositFeeBPS, BPS);
         reserves[address(_aToken)] += depositFee;
         _mint(_receiver, receivedAToken - depositFee);
+        // calculate new receiver's principal
+        principals[_receiver] = balanceOf(_receiver).mulDiv(
+            reserveNormalizedIncome,
+            RAY,
+            Math.Rounding.Up
+        );
         emit Deposit(msg.sender, _receiver, _amount);
         return (receivedAToken - depositFee);
     }
@@ -80,20 +101,36 @@ contract AaveV3NillaLendingPoolNoRewards is BaseNillaEarn {
         IAaveLendingPoolV3 _pool = POOL;
         address _baseToken = address(baseToken);
         IAToken _aToken = aToken;
+        uint256 principal = principals[_receiver];
+        uint256 reserveNormalizedIncome = _pool.getReserveNormalizedIncome(_baseToken);
+        // calculate performance fee
+        uint256 withdrawFee;
+        if (principal != 0) {
+            uint256 currentBal = balanceOf(receiver).mulDiv(
+                reserveNormalizedIncome, // gas opt.
+                RAY,
+                Math.Rounding.Down
+            );
+            uint256 profit = currentBal > principal ? (currentBal - principal) : 0;
+            uint256 fee = profit.mulDiv(performanceFeeBPS, BPS);
+            withdrawFee = fee.mulDiv(RAY, reserveNormalizedIncome, Math.Rounding.Down);
+        }
         // burn user's shares
         _burn(_receiver, _shares);
+        // calculate new receiver's principal
+        principals[_receiver] = balanceOf(_receiver).mulDiv(
+            reserveNormalizedIncome,
+            RAY,
+            Math.Rounding.Up
+        );
         // collect protocol's fee.
-        uint256 withdrawFee = _shares.mulDiv(withdrawFeeBPS, BPS);
+        withdrawFee += _shares.mulDiv(withdrawFeeBPS, BPS);
         uint256 shareAfterFee = _shares - withdrawFee;
         // withdraw user's fund.
         uint256 aTokenShareBefore = _aToken.scaledBalanceOf(address(this));
         uint256 receivedBaseToken = _pool.withdraw(
             _baseToken,
-            shareAfterFee.mulDiv(
-                _pool.getReserveNormalizedIncome(_baseToken),
-                RAY,
-                Math.Rounding.Down
-            ), // aToken amount rounding down
+            shareAfterFee.mulDiv(reserveNormalizedIncome, RAY, Math.Rounding.Down), // aToken amount rounding down
             _receiver
         );
         uint256 burnedATokenShare = aTokenShareBefore - _aToken.scaledBalanceOf(address(this));

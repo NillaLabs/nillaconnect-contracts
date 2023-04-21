@@ -16,7 +16,8 @@ contract BaseNillaEarn is ERC20Upgradeable, ReentrancyGuardUpgradeable, OwnableU
     uint16 public depositFeeBPS;
     uint16 public withdrawFeeBPS;
     address public worker; // wallet to withdraw fee
-
+    uint16 public performanceFeeBPS;
+    mapping(address => uint256) public principals;
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
@@ -27,19 +28,22 @@ contract BaseNillaEarn is ERC20Upgradeable, ReentrancyGuardUpgradeable, OwnableU
     event SetWorker(address);
     event SetDepositFee(uint256);
     event SetWithdrawFee(uint256);
+    event SetPerformanceFee(uint256);
     event WithdrawReserve(address indexed token, address worker, uint256 amount);
 
     function __initialize__(
         string memory _name,
         string memory _symbol,
         uint16 _depositFeeBPS,
-        uint16 _withdrawFeeBPS
+        uint16 _withdrawFeeBPS,
+        uint16 _performanceFeeBPS
     ) internal initializer {
         __ERC20_init(_name, _symbol);
         __ReentrancyGuard_init();
         __Ownable_init();
         depositFeeBPS = _depositFeeBPS;
         withdrawFeeBPS = _withdrawFeeBPS;
+        performanceFeeBPS = _performanceFeeBPS;
         emit SetDepositFee(_depositFeeBPS);
         emit SetWithdrawFee(_withdrawFeeBPS);
     }
@@ -54,6 +58,11 @@ contract BaseNillaEarn is ERC20Upgradeable, ReentrancyGuardUpgradeable, OwnableU
         require(_withdrawFeeBPS <= 3, "fee too much"); // max fee = 0.03%
         withdrawFeeBPS = _withdrawFeeBPS;
         emit SetWithdrawFee(_withdrawFeeBPS);
+    }
+
+    function setPerformanceFeeBPS(uint16 _performanceFeeBPS) external onlyOwner {
+        require(_performanceFeeBPS <= 2000, "fee too much"); // max fee = 20%
+        emit SetPerformanceFee(_performanceFeeBPS);
     }
 
     function setWorker(address _worker) external onlyOwner {
