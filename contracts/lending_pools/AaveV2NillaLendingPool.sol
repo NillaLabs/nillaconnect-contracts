@@ -30,9 +30,10 @@ contract AaveV2NillaLendingPool is BaseNillaEarn {
         string memory _name,
         string memory _symbol,
         uint16 _depositFeeBPS,
-        uint16 _withdrawFeeBPS
+        uint16 _withdrawFeeBPS,
+        uint16 _principalFeeBPS
     ) external {
-        __initialize__(_name, _symbol, _depositFeeBPS, _withdrawFeeBPS);
+        __initialize__(_name, _symbol, _depositFeeBPS, _withdrawFeeBPS, _principalFeeBPS);
         lendingPool = IAaveLendingPoolV2(IAToken(_aToken).POOL());
         aToken = IAToken(_aToken);
         IERC20 _baseToken = IERC20(IAToken(_aToken).UNDERLYING_ASSET_ADDRESS());
@@ -106,7 +107,8 @@ contract AaveV2NillaLendingPool is BaseNillaEarn {
             // using shares for aToken
             uint256 aTokenShareBefore = _aToken.scaledBalanceOf(address(this));
             IERC20(_token).safeTransfer(msg.sender, _amount);
-            uint256 transferedATokenShare = aTokenShareBefore - _aToken.scaledBalanceOf(address(this));
+            uint256 transferedATokenShare = aTokenShareBefore -
+                _aToken.scaledBalanceOf(address(this));
             reserves[_token] -= transferedATokenShare;
             emit WithdrawReserve(msg.sender, _token, transferedATokenShare);
         }

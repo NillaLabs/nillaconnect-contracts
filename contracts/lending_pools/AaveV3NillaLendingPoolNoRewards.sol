@@ -61,7 +61,7 @@ contract AaveV3NillaLendingPoolNoRewards is BaseNillaEarn {
         IERC20 _baseToken = baseToken;
         IAToken _aToken = aToken;
         uint256 principal = principals[_receiver];
-        uint256 reserveNormalizedIncome = POOL.getReserveNormalizedIncome(_baseToken);
+        uint256 reserveNormalizedIncome = POOL.getReserveNormalizedIncome(address(_baseToken));
         // calculate performance fee
         uint256 depositFee;
         if (principal != 0) {
@@ -102,7 +102,7 @@ contract AaveV3NillaLendingPoolNoRewards is BaseNillaEarn {
         address _baseToken = address(baseToken);
         IAToken _aToken = aToken;
         uint256 principal = principals[_receiver];
-        uint256 reserveNormalizedIncome = _pool.getReserveNormalizedIncome(_baseToken);
+        uint256 reserveNormalizedIncome = _pool.getReserveNormalizedIncome(address(_baseToken));
         // calculate performance fee
         uint256 withdrawFee;
         if (principal != 0) {

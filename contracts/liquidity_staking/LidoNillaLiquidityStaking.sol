@@ -28,9 +28,10 @@ contract LidoNillaLiquidityStaking is BaseNillaEarn {
         string memory _name,
         string memory _symbol,
         uint16 _depositFeeBPS,
-        uint16 _withdrawFeeBPS
+        uint16 _withdrawFeeBPS,
+        uint16 _principalFeeBPS
     ) external {
-        __initialize__(_name, _symbol, _depositFeeBPS, _withdrawFeeBPS);
+        __initialize__(_name, _symbol, _depositFeeBPS, _withdrawFeeBPS, _principalFeeBPS);
         swapRouter = ICurvePool(_swapRouter);
         IERC20(stETH).safeApprove(_swapRouter, type(uint256).max);
     }
@@ -49,7 +50,7 @@ contract LidoNillaLiquidityStaking is BaseNillaEarn {
         IstETH _stETH = stETH;
         // submit to stETH Finance.
         uint256 sharesBefore = _stETH.sharesOf(address(this));
-        _stETH.submit{value: msg.value}(address(this));
+        _stETH.submit{ value: msg.value }(address(this));
         uint256 receivedShares = _stETH.sharesOf(address(this)) - sharesBefore;
         // collect protocol's fee.
         uint256 depositFee = (receivedShares * depositFeeBPS) / BPS;
@@ -59,7 +60,11 @@ contract LidoNillaLiquidityStaking is BaseNillaEarn {
         return (receivedShares - depositFee);
     }
 
-    function redeem(uint256 _shares, address _receiver, uint256 minAmount) external nonReentrant returns (uint256) {
+    function redeem(
+        uint256 _shares,
+        address _receiver,
+        uint256 minAmount
+    ) external nonReentrant returns (uint256) {
         // gas saving
         IstETH _stETH = stETH;
         // burn user's shares
@@ -71,14 +76,14 @@ contract LidoNillaLiquidityStaking is BaseNillaEarn {
         uint256 amount = _stETH.getPooledEthByShares(_shares - withdrawFee);
         // swap user's fund via Curve; stETH --> ETH
         uint256 ETHBefore = address(this).balance;
-        swapRouter.exchange{value: 0}(
+        swapRouter.exchange{ value: 0 }(
             1, // index of stETH in Curve Pool
             0, // index of ETH in Curve Pool
             amount,
             minAmount
         );
         uint256 receivedETH = address(this).balance - ETHBefore;
-        (bool success, ) = payable(_receiver).call{ value: receivedETH}("");
+        (bool success, ) = payable(_receiver).call{ value: receivedETH }("");
         require(success, "!withdraw");
         emit Withdraw(msg.sender, _receiver, receivedETH);
         return receivedETH;

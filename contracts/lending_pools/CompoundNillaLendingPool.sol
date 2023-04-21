@@ -42,9 +42,10 @@ contract CompoundNillaLendingPool is BaseNillaEarn {
         string memory _symbol,
         uint16 _depositFeeBPS,
         uint16 _withdrawFeeBPS,
-        uint16 _harvestFeeBPS
+        uint16 _harvestFeeBPS,
+        uint16 _principalFeeBPS
     ) external {
-        __initialize__(_name, _symbol, _depositFeeBPS, _withdrawFeeBPS);
+        __initialize__(_name, _symbol, _depositFeeBPS, _withdrawFeeBPS, _principalFeeBPS);
         cToken = ICToken(_cToken);
         swapRouter = IUniswapRouterV2(_swapRouter);
         harvestFeeBPS = _harvestFeeBPS;
