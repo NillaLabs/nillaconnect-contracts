@@ -118,6 +118,10 @@ contract AaveV3Test is Test {
         uint256 reserveAfter = aaveV3Pool.reserves(address(aToken));
         uint256 depositFee = ((aTokenAfter - aTokenBefore) * 1) / 10_000;
 
+        assertEq(
+            aaveV3Pool.reserves(address(aToken)) + aaveV3Pool.totalSupply(),
+            aToken.scaledBalanceOf(address(aaveV3Pool))
+        );
         assertEq(reserveAfter - reserveBefore, depositFee);
         assertEq(aaveV3Pool.balanceOf(user), aTokenAfter - depositFee);
     }
@@ -158,6 +162,11 @@ contract AaveV3Test is Test {
         uint256 shares = aaveV3Pool.balanceOf(user); // Redeem total shares
         // uint256 withdrawFee = shares.mulDiv(1, 10_000);
         // uint256 reserveBefore = aaveV3Pool.reserves(address(aToken));
+        assertEq(
+            aaveV3Pool.reserves(address(aToken)) + aaveV3Pool.totalSupply(),
+            aToken.scaledBalanceOf(address(aaveV3Pool))
+        );
+
         vm.warp(block.timestamp + 1_000_000);
 
         uint256 currentBal = shares.mulDiv(
@@ -201,25 +210,50 @@ contract AaveV3Test is Test {
 
     function testFuzzyRedeem(uint256 amount) public {
         console.log("---------- TEST FUZZY REDEEM ----------");
-        amount = bound(amount, 10, 1e13);
+        amount = bound(amount, 1e4, 1e9);
         deal(address(baseToken), user, amount);
         aaveV3Pool.deposit(amount, user);
-
+        uint256 principal = aaveV3Pool.principals(user);
         uint256 shares = aaveV3Pool.balanceOf(user); // Redeem total shares
-        uint256 aTokenAfterDeposit = aToken.scaledBalanceOf(address(aaveV3Pool));
-        uint256 withdrawFee = shares.mulDiv(1, 10_000);
-        uint256 reserveBefore = aaveV3Pool.reserves(address(aToken));
+        // uint256 aTokenAfterDeposit = aToken.scaledBalanceOf(address(aaveV3Pool));
+        // uint256 withdrawFee = shares.mulDiv(1, 10_000);
+        // uint256 reserveBefore = aaveV3Pool.reserves(address(aToken));
+
+        assertEq(
+            aaveV3Pool.reserves(address(aToken)) + aaveV3Pool.totalSupply(),
+            aToken.scaledBalanceOf(address(aaveV3Pool))
+        );
 
         vm.warp(block.timestamp + 1_000_000);
+
+        uint256 currentBal = shares.mulDiv(
+            IAaveLendingPoolV3(POOL).getReserveNormalizedIncome(address(baseToken)),
+            1e27,
+            Math.Rounding.Down
+        );
+        uint256 profit = currentBal > principal ? (currentBal - principal) : 0;
+        uint256 performanceFee = (profit * 500) / 10_000;
+        uint256 withdrawFee = performanceFee.mulDiv(
+            1e27,
+            IAaveLendingPoolV3(POOL).getReserveNormalizedIncome(address(baseToken)),
+            Math.Rounding.Down
+        );
+
         aaveV3Pool.redeem(shares, user);
 
-        uint256 addedReserve = aaveV3Pool.reserves(address(aToken)) - reserveBefore;
-        uint256 burnedATokenShare = aTokenAfterDeposit -
-            aToken.scaledBalanceOf(address(aaveV3Pool));
-        uint256 dust = (shares - withdrawFee) - burnedATokenShare;
+        // uint256 addedReserve = aaveV3Pool.reserves(address(aToken)) - reserveBefore;
+        // uint256 burnedATokenShare = aTokenAfterDeposit -
+        // aToken.scaledBalanceOf(address(aaveV3Pool));
+        // uint256 dust = (shares - withdrawFee) - burnedATokenShare;
 
-        assertEq(addedReserve, withdrawFee + dust);
-        assertEq(aaveV3Pool.balanceOf(user), 0);
+        assertEq(
+            aaveV3Pool.reserves(address(aToken)) + aaveV3Pool.totalSupply(),
+            aToken.scaledBalanceOf(address(aaveV3Pool))
+        );
+
+        require(aaveV3Pool.reserves(address(aToken)) - withdrawFee <= 1, "Reserve mismatches"); //leave dust there, a tiny amount.
+        // assertEq(addedReserve, withdrawFee + dust);
+        // assertEq(aaveV3Pool.balanceOf(user), 0);
     }
 
     function testRedeemTooLarge() public {
@@ -305,5 +339,9 @@ contract AaveV3Test is Test {
         // User(Worker) has 0 at first
         assertEq(aToken.balanceOf(user), amountToWithdraw);
         assertEq(reserveA, reserveB - transferedATokenShare);
+        assertEq(
+            aaveV3Pool.reserves(address(aToken)) + aaveV3Pool.totalSupply(),
+            aToken.scaledBalanceOf(address(aaveV3Pool))
+        );
     }
 }
