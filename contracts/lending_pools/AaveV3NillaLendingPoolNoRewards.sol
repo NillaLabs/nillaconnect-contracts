@@ -26,8 +26,6 @@ contract AaveV3NillaLendingPoolNoRewards is BaseNillaEarn {
 
     uint256 internal constant RAY = 1e27;
 
-    address public HARVEST_BOT;
-
     event Deposit(address indexed depositor, address indexed receiver, uint256 amount);
     event Withdraw(address indexed withdrawer, address indexed receiver, uint256 amount);
 

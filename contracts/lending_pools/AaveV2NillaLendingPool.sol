@@ -50,6 +50,17 @@ contract AaveV2NillaLendingPool is BaseNillaEarn {
         // gas saving
         IERC20 _baseToken = baseToken;
         IAToken _aToken = aToken;
+        IAaveLendingPoolV2 _lendingPool = lendingPool;
+        uint256 principal = principals[_receiver];
+        uint256 reserveNormalizedIncome = _lendingPool.getReserveNormalizedIncome(
+            address(_baseToken)
+        );
+        // calculate performance fee, avoiding stack-too-deep
+        uint256 depositFee = _calculatePerformanceFee(
+            _receiver,
+            principal,
+            reserveNormalizedIncome
+        );
         // transfer fund.
         uint256 baseTokenBefore = _baseToken.balanceOf(address(this));
         _baseToken.safeTransferFrom(msg.sender, address(this), _amount);
@@ -57,12 +68,14 @@ contract AaveV2NillaLendingPool is BaseNillaEarn {
         // deposit to Aave v2.
         // using share not rebase amount.
         uint256 aTokenShareBefore = _aToken.scaledBalanceOf(address(this));
-        lendingPool.deposit(address(_baseToken), receivedBaseToken, address(this), 0);
+        _lendingPool.deposit(address(_baseToken), receivedBaseToken, address(this), 0);
         uint256 received = _aToken.scaledBalanceOf(address(this)) - aTokenShareBefore;
         // collect protocol's fee.
-        uint256 depositFee = (received * depositFeeBPS) / BPS;
+        depositFee += (received * depositFeeBPS) / BPS;
         reserves[address(_aToken)] += depositFee;
         _mint(_receiver, received - depositFee);
+        // calculate new receiver's principal, avoiding stack-too-deep
+        _calculateNewPrincipals(_receiver, reserveNormalizedIncome);
         emit Deposit(msg.sender, _receiver, _amount);
         return (received - depositFee);
     }
@@ -72,20 +85,28 @@ contract AaveV2NillaLendingPool is BaseNillaEarn {
         IAaveLendingPoolV2 _lendingPool = lendingPool;
         address _baseToken = address(baseToken);
         IAToken _aToken = aToken;
+        uint256 principal = principals[_receiver];
+        uint256 reserveNormalizedIncome = _lendingPool.getReserveNormalizedIncome(
+            address(_baseToken)
+        );
+        // calculate performance fee, avoiding stack-too-deep
+        uint256 withdrawFee = _calculatePerformanceFee(
+            _receiver,
+            principal,
+            reserveNormalizedIncome
+        );
         // burn user's shares
         _burn(_receiver, _shares);
+        // calculate new receiver's principal, avoiding stack-too-deep
+        _calculateNewPrincipals(_receiver, reserveNormalizedIncome);
         // collect protocol's fee.
-        uint256 withdrawFee = (_shares * withdrawFeeBPS) / BPS;
+        withdrawFee += (_shares * withdrawFeeBPS) / BPS;
         uint256 shareAfterFee = _shares - withdrawFee;
         // withdraw user's fund.
         uint256 aTokenShareBefore = _aToken.scaledBalanceOf(address(this));
         uint256 receivedBaseToken = _lendingPool.withdraw(
             _baseToken,
-            shareAfterFee.mulDiv(
-                _lendingPool.getReserveNormalizedIncome(_baseToken),
-                RAY,
-                Math.Rounding.Down
-            ), // aToken amount rounding down
+            shareAfterFee.mulDiv(reserveNormalizedIncome, RAY, Math.Rounding.Down), // aToken amount rounding down
             _receiver
         );
         uint256 burnedATokenShare = aTokenShareBefore - _aToken.scaledBalanceOf(address(this));
@@ -112,5 +133,36 @@ contract AaveV2NillaLendingPool is BaseNillaEarn {
             reserves[_token] -= transferedATokenShare;
             emit WithdrawReserve(msg.sender, _token, transferedATokenShare);
         }
+    }
+
+    // internal function to calculate performance fee, avoiding stack-too-deep
+    function _calculatePerformanceFee(
+        address _receiver,
+        uint256 _principal,
+        uint256 _reserveNormalizedIncome
+    ) internal returns (uint256 depositFee) {
+        // get current balance from current shares
+        if (_principal != 0) {
+            uint256 currentBal = balanceOf(_receiver).mulDiv(
+                _reserveNormalizedIncome,
+                RAY,
+                Math.Rounding.Down
+            );
+            // calculate profit from current balance compared to latest known principal
+            uint256 profit = currentBal > _principal ? (currentBal - _principal) : 0;
+            // calculate performance fee
+            uint256 fee = profit.mulDiv(performanceFeeBPS, BPS);
+            // sum fee into the withdrawFee
+            depositFee = fee.mulDiv(RAY, _reserveNormalizedIncome, Math.Rounding.Down);
+        }
+    }
+
+    function _calculateNewPrincipals(address _receiver, uint256 _reserveNormalizedIncome) internal {
+        // calculate new receiver's principal
+        principals[_receiver] = balanceOf(_receiver).mulDiv(
+            _reserveNormalizedIncome,
+            RAY,
+            Math.Rounding.Up
+        );
     }
 }
