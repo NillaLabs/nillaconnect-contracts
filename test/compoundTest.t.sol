@@ -52,6 +52,7 @@ contract CompoundTest is Test {
                 "ncDAI",
                 1,
                 1,
+                1,
                 1
             ),
             WETH
@@ -73,12 +74,12 @@ contract CompoundTest is Test {
 
         uint256 balanceBefore = cToken.balanceOf(address(nilla));
         uint256 reservesBefore = nilla.reserves(address(cToken));
-        
+
         nilla.deposit(amount, user);
 
         uint256 balanceAfter = cToken.balanceOf(address(nilla));
         uint256 reservesAfter = nilla.reserves(address(cToken));
-        uint256 depositFee = (balanceAfter - balanceBefore) * 1 / 10_000;  //depositFeeBPS = 0.01%, BPS = 100%
+        uint256 depositFee = ((balanceAfter - balanceBefore) * 1) / 10_000; //depositFeeBPS = 0.01%, BPS = 100%
 
         assertEq(reservesAfter - reservesBefore, depositFee);
         assertEq(nilla.balanceOf(user), balanceAfter - depositFee);
@@ -90,12 +91,12 @@ contract CompoundTest is Test {
 
         uint256 balanceBefore = cToken.balanceOf(address(nilla));
         uint256 reservesBefore = nilla.reserves(address(cToken));
-        
+
         nilla.deposit(amount, user);
 
         uint256 balanceAfter = cToken.balanceOf(address(nilla));
         uint256 reservesAfter = nilla.reserves(address(cToken));
-        uint256 depositFee = (balanceAfter - balanceBefore) * 1 / 10_000;  //depositFeeBPS = 0.01%, BPS = 100%
+        uint256 depositFee = ((balanceAfter - balanceBefore) * 1) / 10_000; //depositFeeBPS = 0.01%, BPS = 100%
 
         assertEq(reservesAfter - reservesBefore, depositFee);
         assertEq(nilla.balanceOf(user), balanceAfter - depositFee);
@@ -116,7 +117,7 @@ contract CompoundTest is Test {
         console.log("After D / Before R:", baseToken.balanceOf(user));
         uint256 reserveBefore = nilla.reserves(address(cToken));
         uint256 shares = nilla.balanceOf(user);
-        uint256 withdrawFee = shares * 1 / 10_000;
+        uint256 withdrawFee = (shares * 1) / 10_000;
 
         console.log("User's shares:", shares);
         console.log("Nilla's shares:", cToken.balanceOf(address(nilla)));
@@ -136,7 +137,7 @@ contract CompoundTest is Test {
 
         uint256 reserveBefore = nilla.reserves(address(cToken));
         uint256 shares = nilla.balanceOf(user);
-        uint256 withdrawFee = shares * 1 / 10_000;
+        uint256 withdrawFee = (shares * 1) / 10_000;
 
         vm.roll(block.number + 20);
         nilla.redeem(shares, user);
@@ -164,10 +165,10 @@ contract CompoundTest is Test {
         uint256 _deadline = block.timestamp + 1000;
 
         uint256 compAmount = IERC20(nilla.COMP()).balanceOf(address(nilla));
-        uint256 minCompAmount = compAmount * 9 / 10;
+        uint256 minCompAmount = (compAmount * 9) / 10;
 
         uint256 botBalanceB = bot.balance;
-        nilla.reinvest(minCompAmount, minCompAmount * 1 / 10_000, _path, _deadline);
+        nilla.reinvest(minCompAmount, (minCompAmount * 1) / 10_000, _path, _deadline);
         uint256 botBalanceA = bot.balance;
         uint256 cTokenAfterReinvest = cToken.balanceOf(address(nilla));
 

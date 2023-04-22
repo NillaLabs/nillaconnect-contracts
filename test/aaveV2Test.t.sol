@@ -50,6 +50,7 @@ contract AaveV2Test is Test {
                 "AAVE V2 - DAI",
                 "naDAI",
                 1,
+                1,
                 1
             )
         );

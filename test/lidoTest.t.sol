@@ -47,6 +47,7 @@ contract LidoTest is Test {
                 "ETH Staking",
                 "ETH",
                 1,
+                1,
                 1
             ),
             address(swapRouter)

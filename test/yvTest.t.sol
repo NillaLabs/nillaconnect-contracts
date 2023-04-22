@@ -62,7 +62,8 @@ contract YVTest is Test {
         //         "Nilla-Yearn WETH Vault",
         //         "WETH",
         //         3,
-        //         3
+        //         3,
+        //         1,
         //     )
         // );
 
