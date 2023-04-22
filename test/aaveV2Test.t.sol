@@ -14,7 +14,7 @@ import "../interfaces/IWNative.sol";
 contract AaveV2Test is Test {
     using SafeERC20 for IERC20;
     using Math for uint256;
-    
+
     TransparentUpgradeableProxyImpl public proxy;
     address public impl;
     address public admin;
@@ -28,7 +28,9 @@ contract AaveV2Test is Test {
     AaveV2NillaLendingPool public aaveV2Pool;
 
     function setUp() public {
-        mainnetFork = vm.createFork("https://mainnet.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161");
+        mainnetFork = vm.createFork(
+            "https://mainnet.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161"
+        );
         vm.selectFork(mainnetFork);
         startHoax(user);
 
@@ -37,7 +39,7 @@ contract AaveV2Test is Test {
         vm.label(WETH, "#### WETH ####");
 
         admin = address(new ProxyAdminImpl());
-        impl  = address(new AaveV2NillaLendingPool());
+        impl = address(new AaveV2NillaLendingPool());
 
         proxy = new TransparentUpgradeableProxyImpl(
             impl,
@@ -74,10 +76,10 @@ contract AaveV2Test is Test {
 
         uint256 aTokenAfter = aToken.scaledBalanceOf(address(aaveV2Pool));
         uint256 reserveAfter = aaveV2Pool.reserves(address(aToken));
-        uint256 depositFee = (aTokenAfter - aTokenBefore) * 1 / 10_000;
+        uint256 depositFee = ((aTokenAfter - aTokenBefore) * 1) / 10_000;
 
         assertEq(reserveAfter - reserveBefore, depositFee);
-        assertEq(aaveV2Pool.balanceOf(user), aTokenAfter - depositFee); 
+        assertEq(aaveV2Pool.balanceOf(user), aTokenAfter - depositFee);
 
         console.log("LP balance in aave before:", aTokenBefore);
         console.log("LP balance in aave after:", aTokenAfter);
@@ -97,10 +99,10 @@ contract AaveV2Test is Test {
 
         uint256 aTokenAfter = aToken.scaledBalanceOf(address(aaveV2Pool));
         uint256 reserveAfter = aaveV2Pool.reserves(address(aToken));
-        uint256 depositFee = (aTokenAfter - aTokenBefore) * 1 / 10_000;
+        uint256 depositFee = ((aTokenAfter - aTokenBefore) * 1) / 10_000;
 
         assertEq(reserveAfter - reserveBefore, depositFee);
-        assertEq(aaveV2Pool.balanceOf(user), aTokenAfter - depositFee); 
+        assertEq(aaveV2Pool.balanceOf(user), aTokenAfter - depositFee);
     }
 
     function testDepositTooLarge() public {
@@ -135,15 +137,16 @@ contract AaveV2Test is Test {
         aaveV2Pool.deposit(amount, user);
 
         uint256 aTokenAfterDeposit = aToken.scaledBalanceOf(address(aaveV2Pool));
-        uint256 shares = aaveV2Pool.balanceOf(user);  // Redeem total shares
+        uint256 shares = aaveV2Pool.balanceOf(user); // Redeem total shares
         uint256 withdrawFee = shares.mulDiv(1, 10_000);
         uint256 reserveBefore = aaveV2Pool.reserves(address(aToken));
-        
+
         vm.warp(block.timestamp + 10_000_000);
         aaveV2Pool.redeem(shares, user);
 
         uint256 addedReserve = aaveV2Pool.reserves(address(aToken)) - reserveBefore;
-        uint256 burnedATokenShare = aTokenAfterDeposit - aToken.scaledBalanceOf(address(aaveV2Pool));
+        uint256 burnedATokenShare = aTokenAfterDeposit -
+            aToken.scaledBalanceOf(address(aaveV2Pool));
         uint256 dust = (shares - withdrawFee) - burnedATokenShare;
 
         assertEq(addedReserve, withdrawFee + dust);
@@ -165,16 +168,17 @@ contract AaveV2Test is Test {
         deal(address(baseToken), user, amount);
         aaveV2Pool.deposit(amount, user);
 
-        uint256 shares = aaveV2Pool.balanceOf(user);  // Redeem total shares
+        uint256 shares = aaveV2Pool.balanceOf(user); // Redeem total shares
         uint256 aTokenAfterDeposit = aToken.scaledBalanceOf(address(aaveV2Pool));
         uint256 withdrawFee = shares.mulDiv(1, 10_000);
         uint256 reserveBefore = aaveV2Pool.reserves(address(aToken));
-        
+
         vm.warp(block.timestamp + 1_000_000);
         aaveV2Pool.redeem(shares, user);
 
         uint256 addedReserve = aaveV2Pool.reserves(address(aToken)) - reserveBefore;
-        uint256 burnedATokenShare = aTokenAfterDeposit - aToken.scaledBalanceOf(address(aaveV2Pool));
+        uint256 burnedATokenShare = aTokenAfterDeposit -
+            aToken.scaledBalanceOf(address(aaveV2Pool));
         uint256 dust = (shares - withdrawFee) - burnedATokenShare;
 
         assertEq(addedReserve, withdrawFee + dust);
@@ -188,7 +192,7 @@ contract AaveV2Test is Test {
 
         uint256 shares = aaveV2Pool.balanceOf(user);
         vm.expectRevert();
-        aaveV2Pool.redeem(shares * 10**10, user);
+        aaveV2Pool.redeem(shares * 10 ** 10, user);
     }
 
     function testRedeemInvalidAmount() public {
@@ -215,7 +219,7 @@ contract AaveV2Test is Test {
 
         aaveV2Pool.deposit(amount, user);
         uint256 reserveB = aaveV2Pool.reserves(address(aToken));
-        uint256 amountToWithdraw = reserveB * 9 / 10;
+        uint256 amountToWithdraw = (reserveB * 9) / 10;
         uint256 aTokenShareBefore = aToken.scaledBalanceOf(address(aaveV2Pool));
         aaveV2Pool.withdrawReserve(address(aToken), amountToWithdraw); // withdraw 90%
         uint256 aTokenShareAfter = aToken.scaledBalanceOf(address(aaveV2Pool));
