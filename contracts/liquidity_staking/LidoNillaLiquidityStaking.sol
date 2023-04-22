@@ -48,14 +48,29 @@ contract LidoNillaLiquidityStaking is BaseNillaEarn {
     function deposit(address _receiver) external payable nonReentrant returns (uint256) {
         // gas saving
         IstETH _stETH = stETH;
+        uint256 principal = principals[_receiver];
+        // calculate performance fee
+        uint256 depositFee;
+        if (principal != 0) {
+            // get current balance from share
+            uint256 currentBal = _stETH.getPooledEthByShares(balanceOf(_receiver));
+            // calculate profit from current balance compared to latest known principal
+            uint256 profit = currentBal > principal ? (currentBal - principal) : 0;
+            // calculate performance fee
+            uint256 fee = profit.mulDiv(performanceFeeBPS, BPS);
+            // sum fee into the depositFee, convert to share
+            depositFee = _stETH.getSharesByPooledEth(fee);
+        }
         // submit to stETH Finance.
         uint256 sharesBefore = _stETH.sharesOf(address(this));
         _stETH.submit{ value: msg.value }(address(this));
         uint256 receivedShares = _stETH.sharesOf(address(this)) - sharesBefore;
         // collect protocol's fee.
-        uint256 depositFee = (receivedShares * depositFeeBPS) / BPS;
+        depositFee += (receivedShares * depositFeeBPS) / BPS;
         reserves[address(_stETH)] += depositFee;
         _mint(_receiver, receivedShares - depositFee);
+        // calculate new receiver's principal
+        principals[_receiver] = _stETH.getPooledEthByShares(balanceOf(_receiver));
         emit Deposit(msg.sender, _receiver, msg.value);
         return (receivedShares - depositFee);
     }
@@ -67,10 +82,25 @@ contract LidoNillaLiquidityStaking is BaseNillaEarn {
     ) external nonReentrant returns (uint256) {
         // gas saving
         IstETH _stETH = stETH;
+        uint256 principal = principals[_receiver];
+        // calculate performance fee
+        uint256 withdrawFee;
+        if (principal != 0) {
+            // get current balance from share
+            uint256 currentBal = _stETH.getPooledEthByShares(balanceOf(_receiver));
+            // calculate profit from current balance compared to latest known principal
+            uint256 profit = currentBal > principal ? (currentBal - principal) : 0;
+            // calculate performance fee
+            uint256 fee = profit.mulDiv(performanceFeeBPS, BPS);
+            // sum fee into the withdrawFee, convert to share
+            withdrawFee = _stETH.getSharesByPooledEth(fee);
+        }
         // burn user's shares
         _burn(_receiver, _shares);
+        // calculate new receiver's principal
+        principals[_receiver] = _stETH.getPooledEthByShares(balanceOf(_receiver));
         // collect protocol's fee
-        uint256 withdrawFee = (_shares * withdrawFeeBPS) / BPS;
+        withdrawFee += (_shares * withdrawFeeBPS) / BPS;
         reserves[address(stETH)] += withdrawFee;
         // convert nilla's shares to stETH amount
         uint256 amount = _stETH.getPooledEthByShares(_shares - withdrawFee);
