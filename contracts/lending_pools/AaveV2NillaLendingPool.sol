@@ -140,7 +140,7 @@ contract AaveV2NillaLendingPool is BaseNillaEarn {
         address _receiver,
         uint256 _principal,
         uint256 _reserveNormalizedIncome
-    ) internal returns (uint256 performanceFee) {
+    ) internal view returns (uint256 performanceFee) {
         // get current balance from current shares
         if (_principal != 0) {
             uint256 currentBal = balanceOf(_receiver).mulDiv(
