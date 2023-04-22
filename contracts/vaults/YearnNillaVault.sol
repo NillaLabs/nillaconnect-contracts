@@ -65,21 +65,34 @@ contract YearnNillaVault is BaseNillaEarn {
         //gas saving
         IERC20 _baseToken = baseToken;
         IYVToken _yvToken = yvToken;
-
+        uint256 principal = principals[_receiver];
+        uint256 pricePerShare = _yvToken.pricePerShare();
+        // calculate performace fee
+        uint256 depositFee;
+        if (principal != 0) {
+            // get current balance from share
+            uint256 currentBal = pricePerShare * balanceOf(_receiver);
+            // calculate profit from current balance compared to latest known principal
+            uint256 profit = currentBal > principal ? (currentBal - principal) : 0;
+            // calculate performance fee
+            uint256 fee = (profit * performanceFeeBPS) / BPS;
+            // sum fee into the depositFee, convert to share
+            depositFee = fee / pricePerShare;
+        }
         // transfer fund.
         uint256 baseTokenBefore = _baseToken.balanceOf(address(this));
         _baseToken.safeTransferFrom(msg.sender, address(this), _amount);
         uint256 receivedBaseToken = _baseToken.balanceOf(address(this)) - baseTokenBefore;
-
         // deposit to yearn.
         uint256 yvBefore = _yvToken.balanceOf(address(this));
         yearnPartnerTracker.deposit(address(_yvToken), PARTNER_ADDRESS, receivedBaseToken);
         uint256 receivedYVToken = _yvToken.balanceOf(address(this)) - yvBefore;
-
         // collect protocol's fee.
-        uint256 depositFee = (receivedYVToken * depositFeeBPS) / BPS;
+        depositFee += (receivedYVToken * depositFeeBPS) / BPS;
         reserves[address(_yvToken)] += depositFee;
         _mint(_receiver, receivedYVToken - depositFee);
+        // calculate new receiver's principal
+        principals[_receiver] = pricePerShare * balanceOf(_receiver);
         emit Deposit(msg.sender, _receiver, _amount);
         return receivedYVToken - depositFee;
     }
@@ -92,10 +105,26 @@ contract YearnNillaVault is BaseNillaEarn {
         // gas saving
         IERC20 _baseToken = baseToken;
         IYVToken _yvToken = yvToken;
+        uint256 principal = principals[_receiver];
+        uint256 pricePerShare = _yvToken.pricePerShare();
+        // calculate performance fee
+        uint256 withdrawFee;
+        if (principal != 0) {
+            // get current balance from share
+            uint256 currentBal = pricePerShare * balanceOf(_receiver);
+            // calculate profit from current balance compared to latest known principal
+            uint256 profit = currentBal > principal ? (currentBal - principal) : 0;
+            // calculate performance fee
+            uint256 fee = (profit * performanceFeeBPS) / BPS;
+            // sum fee into the withdrawFee, convert to share
+            withdrawFee = fee / pricePerShare;
+        }
         // burn user's shares
         _burn(_receiver, _shares);
+        // calculate new receiver's principal
+        principals[_receiver] = pricePerShare * balanceOf(_receiver);
         // collect protocol's fee
-        uint256 withdrawFee = (_shares * withdrawFeeBPS) / BPS;
+        withdrawFee += (_shares * withdrawFeeBPS) / BPS;
         reserves[address(_yvToken)] += withdrawFee;
         uint256 baseTokenBefore = _baseToken.balanceOf(address(this));
         // withdraw user's fund.

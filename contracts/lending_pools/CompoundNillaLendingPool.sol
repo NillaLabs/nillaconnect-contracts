@@ -75,6 +75,20 @@ contract CompoundNillaLendingPool is BaseNillaEarn {
         // gas saving
         IERC20 _baseToken = baseToken;
         ICToken _cToken = cToken;
+        uint256 principal = principals[_receiver];
+        uint256 exchangeRate = uint256(_cToken.exchangeRateCurrent());
+        // calculate performance fee
+        uint256 depositFee;
+        if (principal != 0) {
+            // get current balance from share
+            uint256 currentBal = exchangeRate * balanceOf(_receiver);
+            // calculate profit from current balance compared to latest known principal
+            uint256 profit = currentBal > principal ? (currentBal - principal) : 0;
+            // calculate performance fee
+            uint256 fee = (profit * performanceFeeBPS) / BPS;
+            // sum fee into the depositFee, convert to share
+            depositFee = fee / exchangeRate;
+        }
         // transfer fund.
         uint256 baseTokenBefore = _baseToken.balanceOf(address(this));
         _baseToken.safeTransferFrom(msg.sender, address(this), _amount);
@@ -84,9 +98,11 @@ contract CompoundNillaLendingPool is BaseNillaEarn {
         require(_cToken.mint(receivedBaseToken) == 0, "!mint");
         uint256 receivedCToken = _cToken.balanceOf(address(this)) - cTokenBefore;
         // collect protocol's fee.
-        uint256 depositFee = (receivedCToken * depositFeeBPS) / BPS;
+        depositFee += (receivedCToken * depositFeeBPS) / BPS;
         reserves[address(_cToken)] += depositFee;
         _mint(_receiver, receivedCToken - depositFee);
+        // calculate new receiver's principal
+        principals[_receiver] = exchangeRate * balanceOf(_receiver);
         emit Deposit(msg.sender, _receiver, _amount);
         return (receivedCToken - depositFee);
     }
@@ -95,10 +111,26 @@ contract CompoundNillaLendingPool is BaseNillaEarn {
         // gas saving
         IERC20 _baseToken = baseToken;
         ICToken _cToken = cToken;
+        uint256 principal = principals[_receiver];
+        uint256 exchangeRate = uint256(_cToken.exchangeRateCurrent());
+        // calculate performance fee
+        uint256 withdrawFee;
+        if (principal != 0) {
+            // get current balance from share
+            uint256 currentBal = exchangeRate * balanceOf(_receiver);
+            // calculate profit from current balance compared to latest known principal
+            uint256 profit = currentBal > principal ? (currentBal - principal) : 0;
+            // calculate performance fee
+            uint256 fee = (profit * performanceFeeBPS) / BPS;
+            // sum fee into the withdrawFee, convert to share
+            withdrawFee = fee / exchangeRate;
+        }
         // burn user's shares
         _burn(_receiver, _shares);
+        // calculate new receiver's principal
+        principals[_receiver] = exchangeRate * balanceOf(_receiver);
         // collect protocol's fee.
-        uint256 withdrawFee = (_shares * withdrawFeeBPS) / BPS;
+        withdrawFee += (_shares * withdrawFeeBPS) / BPS;
         reserves[address(_cToken)] += withdrawFee;
         // withdraw user's fund.
         uint256 baseTokenBefore = _baseToken.balanceOf(address(this));
