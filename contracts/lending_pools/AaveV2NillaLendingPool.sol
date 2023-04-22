@@ -140,7 +140,7 @@ contract AaveV2NillaLendingPool is BaseNillaEarn {
         address _receiver,
         uint256 _principal,
         uint256 _reserveNormalizedIncome
-    ) internal returns (uint256 depositFee) {
+    ) internal returns (uint256 performanceFee) {
         // get current balance from current shares
         if (_principal != 0) {
             uint256 currentBal = balanceOf(_receiver).mulDiv(
@@ -152,8 +152,8 @@ contract AaveV2NillaLendingPool is BaseNillaEarn {
             uint256 profit = currentBal > _principal ? (currentBal - _principal) : 0;
             // calculate performance fee
             uint256 fee = profit.mulDiv(performanceFeeBPS, BPS);
-            // sum fee into the withdrawFee
-            depositFee = fee.mulDiv(RAY, _reserveNormalizedIncome, Math.Rounding.Down);
+            // sum fee into the fee
+            performanceFee = fee.mulDiv(RAY, _reserveNormalizedIncome, Math.Rounding.Down);
         }
     }
 

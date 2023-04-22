@@ -96,7 +96,7 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
             uint256 profit = currentBal > principal ? (currentBal - principal) : 0;
             // calculate performance fee
             uint256 fee = profit.mulDiv(performanceFeeBPS, BPS);
-            // sum fee into the withdrawFee
+            // sum fee into the depositFee
             depositFee = fee.mulDiv(RAY, reserveNormalizedIncome, Math.Rounding.Down);
         }
         // transfer fund.
