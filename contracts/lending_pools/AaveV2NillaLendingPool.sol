@@ -75,7 +75,7 @@ contract AaveV2NillaLendingPool is BaseNillaEarn {
         reserves[address(_aToken)] += depositFee;
         _mint(_receiver, received - depositFee);
         // calculate new receiver's principal, avoiding stack-too-deep
-        _calculateNewPrincipals(_receiver, reserveNormalizedIncome);
+        _updateNewPrincipals(_receiver, reserveNormalizedIncome);
         emit Deposit(msg.sender, _receiver, _amount);
         return (received - depositFee);
     }
@@ -98,7 +98,7 @@ contract AaveV2NillaLendingPool is BaseNillaEarn {
         // burn user's shares
         _burn(_receiver, _shares);
         // calculate new receiver's principal, avoiding stack-too-deep
-        _calculateNewPrincipals(_receiver, reserveNormalizedIncome);
+        _updateNewPrincipals(_receiver, reserveNormalizedIncome);
         // collect protocol's fee.
         withdrawFee += (_shares * withdrawFeeBPS) / BPS;
         uint256 shareAfterFee = _shares - withdrawFee;
@@ -157,8 +157,8 @@ contract AaveV2NillaLendingPool is BaseNillaEarn {
         }
     }
 
-    function _calculateNewPrincipals(address _receiver, uint256 _reserveNormalizedIncome) internal {
-        // calculate new receiver's principal
+    function _updateNewPrincipals(address _receiver, uint256 _reserveNormalizedIncome) internal {
+        // update new receiver's principal
         principals[_receiver] = balanceOf(_receiver).mulDiv(
             _reserveNormalizedIncome,
             RAY,
