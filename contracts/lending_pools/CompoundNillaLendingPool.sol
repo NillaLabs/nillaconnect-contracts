@@ -76,7 +76,7 @@ contract CompoundNillaLendingPool is BaseNillaEarn {
         IERC20 _baseToken = baseToken;
         ICToken _cToken = cToken;
         uint256 principal = principals[_receiver];
-        uint256 exchangeRate = uint256(_cToken.exchangeRateCurrent());
+        uint256 exchangeRate = uint256(_cToken.exchangeRateCurrent()) / 1e18;
         // calculate performance fee
         uint256 depositFee;
         if (principal != 0) {
@@ -102,7 +102,9 @@ contract CompoundNillaLendingPool is BaseNillaEarn {
         reserves[address(_cToken)] += depositFee;
         _mint(_receiver, receivedCToken - depositFee);
         // calculate new receiver's principal
-        principals[_receiver] = uint256(_cToken.exchangeRateCurrent()) * balanceOf(_receiver);
+        principals[_receiver] =
+            (uint256(_cToken.exchangeRateCurrent()) * balanceOf(_receiver)) /
+            1e18;
         emit Deposit(msg.sender, _receiver, _amount);
         return (receivedCToken - depositFee);
     }
@@ -112,7 +114,7 @@ contract CompoundNillaLendingPool is BaseNillaEarn {
         IERC20 _baseToken = baseToken;
         ICToken _cToken = cToken;
         uint256 principal = principals[_receiver];
-        uint256 exchangeRate = uint256(_cToken.exchangeRateCurrent());
+        uint256 exchangeRate = uint256(_cToken.exchangeRateCurrent()) / 1e18;
         // calculate performance fee
         uint256 withdrawFee;
         if (principal != 0) {
@@ -136,7 +138,9 @@ contract CompoundNillaLendingPool is BaseNillaEarn {
         uint256 receivedBaseToken = _baseToken.balanceOf(address(this)) - baseTokenBefore;
         _baseToken.safeTransfer(_receiver, receivedBaseToken);
         // calculate new receiver's principal
-        principals[_receiver] = uint256(_cToken.exchangeRateCurrent()) * balanceOf(_receiver);
+        principals[_receiver] =
+            (uint256(_cToken.exchangeRateCurrent()) * balanceOf(_receiver)) /
+            1e18;
         emit Withdraw(msg.sender, _receiver, receivedBaseToken);
         return receivedBaseToken;
     }

@@ -66,7 +66,7 @@ contract YearnNillaVault is BaseNillaEarn {
         IERC20 _baseToken = baseToken;
         IYVToken _yvToken = yvToken;
         uint256 principal = principals[_receiver];
-        uint256 pricePerShare = _yvToken.pricePerShare();
+        uint256 pricePerShare = _yvToken.pricePerShare() / (10 ** _decimals);
         // calculate performace fee
         uint256 depositFee;
         if (principal != 0) {
@@ -92,7 +92,9 @@ contract YearnNillaVault is BaseNillaEarn {
         reserves[address(_yvToken)] += depositFee;
         _mint(_receiver, receivedYVToken - depositFee);
         // calculate new receiver's principal
-        principals[_receiver] = pricePerShare * balanceOf(_receiver);
+        principals[_receiver] =
+            ((_yvToken.pricePerShare()) * balanceOf(_receiver)) /
+            (10 ** _decimals);
         emit Deposit(msg.sender, _receiver, _amount);
         return receivedYVToken - depositFee;
     }
@@ -106,7 +108,7 @@ contract YearnNillaVault is BaseNillaEarn {
         IERC20 _baseToken = baseToken;
         IYVToken _yvToken = yvToken;
         uint256 principal = principals[_receiver];
-        uint256 pricePerShare = _yvToken.pricePerShare();
+        uint256 pricePerShare = _yvToken.pricePerShare() / (10 ** _decimals);
         // calculate performance fee
         uint256 withdrawFee;
         if (principal != 0) {
@@ -121,8 +123,6 @@ contract YearnNillaVault is BaseNillaEarn {
         }
         // burn user's shares
         _burn(_receiver, _shares);
-        // calculate new receiver's principal
-        principals[_receiver] = pricePerShare * balanceOf(_receiver);
         // collect protocol's fee
         withdrawFee += (_shares * withdrawFeeBPS) / BPS;
         reserves[address(_yvToken)] += withdrawFee;
@@ -130,6 +130,10 @@ contract YearnNillaVault is BaseNillaEarn {
         // withdraw user's fund.
         _yvToken.withdraw(_shares - withdrawFee, _receiver, _maxLoss);
         uint256 receivedBaseToken = _baseToken.balanceOf(address(this)) - baseTokenBefore;
+        // calculate new receiver's principal
+        principals[_receiver] =
+            ((_yvToken.pricePerShare()) * balanceOf(_receiver)) /
+            (10 ** _decimals);
         emit Withdraw(msg.sender, _receiver, receivedBaseToken, _maxLoss);
         return receivedBaseToken;
     }

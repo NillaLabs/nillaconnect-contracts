@@ -97,8 +97,6 @@ contract LidoNillaLiquidityStaking is BaseNillaEarn {
         }
         // burn user's shares
         _burn(_receiver, _shares);
-        // calculate new receiver's principal
-        principals[_receiver] = _stETH.getPooledEthByShares(balanceOf(_receiver));
         // collect protocol's fee
         withdrawFee += (_shares * withdrawFeeBPS) / BPS;
         reserves[address(stETH)] += withdrawFee;
@@ -115,6 +113,9 @@ contract LidoNillaLiquidityStaking is BaseNillaEarn {
         uint256 receivedETH = address(this).balance - ETHBefore;
         (bool success, ) = payable(_receiver).call{ value: receivedETH }("");
         require(success, "!withdraw");
+        // calculate new receiver's principal
+        // NOTE: Rate that we calculate fee is different from user's rate when withdrawing.
+        principals[_receiver] = _stETH.getPooledEthByShares(balanceOf(_receiver));
         emit Withdraw(msg.sender, _receiver, receivedETH);
         return receivedETH;
     }

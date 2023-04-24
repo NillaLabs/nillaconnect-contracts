@@ -34,6 +34,8 @@ contract YVTest is Test {
 
     uint256 mainnetFork;
 
+    uint256 RATE;
+
     event Deposit(address indexed depositor, address indexed receiver, uint256 amount);
     event Withdraw(
         address indexed withdrawer,
@@ -71,6 +73,8 @@ contract YVTest is Test {
         );
 
         vault = YearnNillaVault(address(proxy));
+
+        RATE = 10 ** vault.decimals();
 
         IERC20 _token = IERC20(yvToken.token());
         yvTotalAssets = yvToken.totalDebt() + _token.balanceOf(address(yvToken));
@@ -136,7 +140,7 @@ contract YVTest is Test {
         uint256 depositFee = ((balanceInYearnAfter - balanceInYearnBefore) * 1) / 10_000; //depositFeeBPS = 0.01%, BPS = 100%
 
         assertEq(reservesAfterDeposit - reservesBeforeDeposit, depositFee);
-        assertEq(vault.principals(user), yvToken.pricePerShare() * vault.balanceOf(user));
+        assertEq(vault.principals(user), (yvToken.pricePerShare() * vault.balanceOf(user)) / RATE);
     }
 
     function testDepositZeroAmount() public {
@@ -175,7 +179,7 @@ contract YVTest is Test {
 
         assertEq(reservesAfterDeposit - reservesBeforeDeposit, depositFee);
         assertEq(vault.balanceOf(user), balanceInYearnAfter - depositFee);
-        assertEq(vault.principals(user), yvToken.pricePerShare() * vault.balanceOf(user));
+        assertEq(vault.principals(user), (yvToken.pricePerShare() * vault.balanceOf(user)) / RATE);
     }
 
     function testRedeemNormal() public {
@@ -195,16 +199,16 @@ contract YVTest is Test {
         vm.warp(block.timestamp + 1_000_000);
 
         uint256 shares = vault.balanceOf(user);
-        uint256 currentBal = shares * yvToken.pricePerShare();
+        uint256 currentBal = (shares * yvToken.pricePerShare()) / RATE;
         uint256 profit = currentBal > principal ? (currentBal - principal) : 0;
         uint256 fee = (profit * 500) / 10_000;
-        uint256 withdrawFee = fee / yvToken.pricePerShare();
+        uint256 withdrawFee = fee / yvToken.pricePerShare() / RATE;
+        withdrawFee += (shares * 1) / 10_000; // withdrawFeeBPS = 0.03% BPS 100%
 
         vault.redeem(vault.balanceOf(user), user, maxLoss);
 
         uint256 reservesAfterWithdraw = vault.reserves(address(yvToken));
         uint256 baseTokenAfter = _token.balanceOf(user);
-        withdrawFee += (shares * 1) / 10_000; // withdrawFeeBPS = 0.03% BPS 100%
 
         assertEq(withdrawFee, reservesAfterWithdraw - reservesAfterDeposit);
         require((baseTokenAfter - baseTokenBefore) <= amount, "Received token exceed amount in");
@@ -263,10 +267,10 @@ contract YVTest is Test {
         vm.warp(block.timestamp + 1_000_000);
 
         uint256 shares = vault.balanceOf(user);
-        uint256 currentBal = shares * yvToken.pricePerShare();
+        uint256 currentBal = (shares * yvToken.pricePerShare()) / RATE;
         uint256 profit = currentBal > principal ? (currentBal - principal) : 0;
         uint256 fee = (profit * 500) / 10_000;
-        uint256 withdrawFee = fee / yvToken.pricePerShare();
+        uint256 withdrawFee = fee / yvToken.pricePerShare() / RATE;
 
         vault.redeem(vault.balanceOf(user), user, maxLoss);
 
