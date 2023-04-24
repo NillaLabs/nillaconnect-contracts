@@ -48,7 +48,7 @@ contract LidoTest is Test {
                 "ETH",
                 1,
                 1,
-                1
+                500
             ),
             address(swapRouter)
         );
@@ -67,19 +67,18 @@ contract LidoTest is Test {
         uint256 reserveBefore = nilla.reserves(address(lido));
 
         nilla.deposit{ value: amount }(user);
-
+        uint256 principal = nilla.principals(user);
         uint256 reserveAfter = nilla.reserves(address(lido));
         uint256 sharesAfter = lido.sharesOf(address(nilla));
         uint256 depositFee = ((sharesAfter - sharesBefore) * 1) / 10_000;
 
         assertEq(reserveAfter - reserveBefore, depositFee);
         assertEq(nilla.balanceOf(user), sharesAfter - depositFee);
-
-        // console.log("Base B:", sharesBefore);
-        // console.log("Base A:", sharesAfter);
-        // console.log("Reserve B:", reserveBefore);
-        // console.log("Reserve A:", reserveAfter);
-        // console.log("Deposit Fee:", depositFee);
+        assertEq(
+            nilla.reserves(address(lido)) + nilla.totalSupply(),
+            lido.sharesOf(address(nilla))
+        );
+        assertEq(principal, lido.getPooledEthByShares(nilla.balanceOf(user)));
     }
 
     function testFuzzyDeposit(uint256 amount) public {
@@ -96,6 +95,11 @@ contract LidoTest is Test {
 
         assertEq(reserveAfter - reserveBefore, depositFee);
         assertEq(nilla.balanceOf(user), sharesAfter - depositFee);
+        assertEq(
+            nilla.reserves(address(lido)) + nilla.totalSupply(),
+            lido.sharesOf(address(nilla))
+        );
+        assertEq(nilla.principals(user), lido.getPooledEthByShares(nilla.balanceOf(user)));
     }
 
     function testDepositTooLarge() public {
@@ -115,23 +119,30 @@ contract LidoTest is Test {
         uint256 amount = 1e6;
         deal(address(lido), user, amount); // deal just in case.
         nilla.deposit{ value: amount }(user);
-        // vm.warp(block.timestamp + 1_000_000);
+
+        vm.warp(block.timestamp + 1_000_000);
+
         uint256 shares = nilla.balanceOf(user); // Redeem total shares
         uint256 withdrawFee = (shares * 1) / 10_000;
-        // uint256 reserveBefore = nilla.reserves(address(lido));
-        uint256 amountOutMin = amount / 10;
-        uint256 _amount = lido.getPooledEthByShares(shares - withdrawFee);
+        uint256 reserveBefore = nilla.reserves(address(lido));
 
-        (bool isSuccess, bytes memory response) = address(swapRouter).staticcall(
-            abi.encodeWithSelector(ICurvePool.exchange.selector, 1, 0, _amount, amountOutMin)
+        uint256 currentBal = lido.getPooledEthByShares(nilla.balanceOf(user));
+        uint256 profit = currentBal > nilla.principals(user)
+            ? (currentBal - nilla.principals(user))
+            : 0;
+        uint256 fee = profit.mulDiv(500, 10_000);
+        withdrawFee += lido.getSharesByPooledEth(fee);
+
+        nilla.redeem(shares, user, lido.getPooledEthByShares(shares) / 10);
+
+        uint256 reserveAfter = nilla.reserves(address(lido));
+        assertEq(reserveAfter - reserveBefore, withdrawFee);
+        assertEq(nilla.principals(user), lido.getPooledEthByShares(nilla.balanceOf(user)));
+        require(
+            lido.sharesOf(address(nilla)) - (nilla.reserves(address(lido)) + nilla.totalSupply()) <=
+                1,
+            "Error: Rounding more than 1"
         );
-        require(isSuccess, "Static Call failed");
-        console.log("Res:", uint256(bytes32(response)));
-
-        // uint256 receivedETH = nilla.redeem(shares, user, amountOutMin);
-        // uint256 reserveAfter = nilla.reserves(address(lido));
-        // assertEq(reserveAfter - reserveBefore, withdrawFee);
-        // assertEq(receivedETH, reETH);
     }
 
     function testFuzzyRedeem(uint256 amount) public {
@@ -145,13 +156,23 @@ contract LidoTest is Test {
         uint256 withdrawFee = (shares * 1) / 10_000;
         uint256 reserveBefore = nilla.reserves(address(lido));
 
-        uint256 balanceB = user.balance;
-        uint256 receivedETH = nilla.redeem(shares, user, amount / 10);
-        uint256 balanceA = user.balance;
+        uint256 currentBal = lido.getPooledEthByShares(nilla.balanceOf(user));
+        uint256 profit = currentBal > nilla.principals(user)
+            ? (currentBal - nilla.principals(user))
+            : 0;
+        uint256 fee = profit.mulDiv(500, 10_000);
+        withdrawFee += lido.getSharesByPooledEth(fee);
+
+        nilla.redeem(shares, user, lido.getPooledEthByShares(shares) / 10);
 
         uint256 reserveAfter = nilla.reserves(address(lido));
 
         assertEq(reserveAfter - reserveBefore, withdrawFee);
-        assertEq(receivedETH, balanceA - balanceB);
+        assertEq(nilla.principals(user), lido.getPooledEthByShares(nilla.balanceOf(user)));
+        require(
+            lido.sharesOf(address(nilla)) - (nilla.reserves(address(lido)) + nilla.totalSupply()) <=
+                1,
+            "Error: Rounding more than 1"
+        );
     }
 }
