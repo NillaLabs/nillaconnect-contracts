@@ -53,7 +53,7 @@ contract CompoundTest is Test {
                 1,
                 1,
                 1,
-                1
+                500
             ),
             WETH
         );
@@ -83,6 +83,14 @@ contract CompoundTest is Test {
 
         assertEq(reservesAfter - reservesBefore, depositFee);
         assertEq(nilla.balanceOf(user), balanceAfter - depositFee);
+        assertEq(
+            nilla.reserves(address(cToken)) + nilla.totalSupply(),
+            cToken.balanceOf(address(nilla))
+        );
+        assertEq(
+            nilla.principals(user),
+            uint256(cToken.exchangeRateCurrent()) * nilla.balanceOf(user)
+        );
     }
 
     function testFuzzyDeposit(uint256 amount) public {
@@ -100,6 +108,15 @@ contract CompoundTest is Test {
 
         assertEq(reservesAfter - reservesBefore, depositFee);
         assertEq(nilla.balanceOf(user), balanceAfter - depositFee);
+        assertEq(reservesAfter - reservesBefore, depositFee);
+        assertEq(
+            nilla.reserves(address(cToken)) + nilla.totalSupply(),
+            cToken.balanceOf(address(nilla))
+        );
+        assertEq(
+            nilla.principals(user),
+            uint256(cToken.exchangeRateCurrent()) * nilla.balanceOf(user)
+        );
     }
 
     function testDepositToZeroAddress() public {
@@ -112,22 +129,34 @@ contract CompoundTest is Test {
     function testRedeemNormal() public {
         uint256 amount = 1e18;
         deal(address(baseToken), user, amount);
-        console.log("Before D:", baseToken.balanceOf(user));
+
         nilla.deposit(amount, user);
-        console.log("After D / Before R:", baseToken.balanceOf(user));
+
+        uint256 principal = nilla.principals(user);
         uint256 reserveBefore = nilla.reserves(address(cToken));
         uint256 shares = nilla.balanceOf(user);
         uint256 withdrawFee = (shares * 1) / 10_000;
 
-        console.log("User's shares:", shares);
-        console.log("Nilla's shares:", cToken.balanceOf(address(nilla)));
-
         vm.roll(block.number + 20);
 
+        uint256 currentBal = nilla.balanceOf(user) * uint256(cToken.exchangeRateCurrent());
+        uint256 profit = currentBal > principal ? (currentBal - principal) : 0;
+        uint256 fee = (profit * 500) / 10_000;
+        withdrawFee += fee / uint256(cToken.exchangeRateCurrent());
+
         nilla.redeem(shares, user);
-        console.log("After  R:", baseToken.balanceOf(user));
+
         uint256 reserveAfter = nilla.reserves(address(cToken));
+
         assertEq(reserveAfter - reserveBefore, withdrawFee);
+        assertEq(
+            nilla.reserves(address(cToken)) + nilla.totalSupply(),
+            cToken.balanceOf(address(nilla))
+        );
+        assertEq(
+            nilla.principals(user),
+            uint256(cToken.exchangeRateCurrent()) * nilla.balanceOf(user)
+        );
     }
 
     function testFuzzyRedeem(uint256 amount) public {

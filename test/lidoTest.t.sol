@@ -116,8 +116,7 @@ contract LidoTest is Test {
     }
 
     function testRedeemNormal() public {
-        uint256 amount = 1e6;
-        deal(address(lido), user, amount); // deal just in case.
+        uint256 amount = 1e18;
         nilla.deposit{ value: amount }(user);
 
         vm.warp(block.timestamp + 1_000_000);
@@ -136,6 +135,7 @@ contract LidoTest is Test {
         nilla.redeem(shares, user, lido.getPooledEthByShares(shares) / 10);
 
         uint256 reserveAfter = nilla.reserves(address(lido));
+
         assertEq(reserveAfter - reserveBefore, withdrawFee);
         assertEq(nilla.principals(user), lido.getPooledEthByShares(nilla.balanceOf(user)));
         require(
