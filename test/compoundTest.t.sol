@@ -164,14 +164,31 @@ contract CompoundTest is Test {
         deal(address(baseToken), user, amount);
         nilla.deposit(amount, user);
 
+        uint256 principal = nilla.principals(user);
         uint256 reserveBefore = nilla.reserves(address(cToken));
         uint256 shares = nilla.balanceOf(user);
         uint256 withdrawFee = (shares * 1) / 10_000;
 
         vm.roll(block.number + 20);
+
+        uint256 currentBal = nilla.balanceOf(user) * uint256(cToken.exchangeRateCurrent());
+        uint256 profit = currentBal > principal ? (currentBal - principal) : 0;
+        uint256 fee = (profit * 500) / 10_000;
+        withdrawFee += fee / uint256(cToken.exchangeRateCurrent());
+
         nilla.redeem(shares, user);
+
         uint256 reserveAfter = nilla.reserves(address(cToken));
+
         assertEq(reserveAfter - reserveBefore, withdrawFee);
+        assertEq(
+            nilla.reserves(address(cToken)) + nilla.totalSupply(),
+            cToken.balanceOf(address(nilla))
+        );
+        assertEq(
+            nilla.principals(user),
+            uint256(cToken.exchangeRateCurrent()) * nilla.balanceOf(user)
+        );
     }
 
     function testReinvest() public {
