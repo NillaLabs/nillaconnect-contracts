@@ -112,11 +112,7 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
         reserves[address(_aToken)] += depositFee;
         _mint(_receiver, receivedAToken - depositFee);
         // calculate new receiver's principal
-        principals[_receiver] = balanceOf(_receiver).mulDiv(
-            reserveNormalizedIncome,
-            RAY,
-            Math.Rounding.Up
-        );
+        _updateNewPrincipals(_receiver, POOL.getReserveNormalizedIncome(address(_baseToken)));
         emit Deposit(msg.sender, _receiver, _amount);
         return (receivedAToken - depositFee);
     }
@@ -146,12 +142,6 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
         }
         // burn user's shares
         _burn(_receiver, _shares);
-        // calculate new receiver's principal
-        principals[_receiver] = balanceOf(_receiver).mulDiv(
-            reserveNormalizedIncome,
-            RAY,
-            Math.Rounding.Up
-        );
         // collect protocol's fee.
         withdrawFee += _shares.mulDiv(withdrawFeeBPS, BPS);
         uint256 shareAfterFee = _shares - withdrawFee;
@@ -166,6 +156,8 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
         // dust after burn rounding.
         uint256 dust = shareAfterFee - burnedATokenShare;
         reserves[address(aToken)] += (withdrawFee + dust);
+        // calculate new receiver's principal
+        _updateNewPrincipals(_receiver, POOL.getReserveNormalizedIncome(address(_baseToken)));
         emit Withdraw(msg.sender, _receiver, receivedBaseToken);
         return receivedBaseToken;
     }
@@ -240,5 +232,15 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
         // re-supply into pool
         POOL.supply(address(_baseToken), _amount, address(this), 0);
         emit Reinvest(address(POOL), _amount);
+    }
+
+    // NOTE: internal function to avoid stack-too-deep
+    function _updateNewPrincipals(address _receiver, uint256 _reserveNormalizedIncome) internal {
+        // update new receiver's principal
+        principals[_receiver] = balanceOf(_receiver).mulDiv(
+            _reserveNormalizedIncome,
+            RAY,
+            Math.Rounding.Up
+        );
     }
 }
