@@ -16,7 +16,6 @@ CHAIN_ID = set_network('mainnet')
 f_address = open('./scripts/constants/address.json', )
 data_address = json.load(f_address)
 
-# aave_v2_address = data_address[CHAIN_ID]['AAVEV2_ATOKEN']
 # aave_v3_address = data_address[CHAIN_ID]['AAVEV3_ATOKEN']
 # compound_address = data_address[CHAIN_ID]['COMPOUND_CTOKEN']
 lido_address = data_address[CHAIN_ID]['LIDO']
@@ -108,26 +107,7 @@ def main():
     #     )
     #     compound_lp = Contract.from_abi("CompoundNillaLendingPool", proxy_impl_compound.address, impl_compound.abi)
     #     print(f'Compound:- Proxy LP {token}', compound_lp, '\n -----------------------------------------------------')
-
-    # ---------- Deploy AAVE V2's ----------
-    # impl_aave_v2 = AaveV2NillaLendingPool.deploy({'from': deployer})
-    # for token in aave_v2_address:
-    #     aave_v2_initilize_encoded = encode_function_data(
-    #         impl_aave_v2.initialize,
-    #         aave_v2_address[token],
-    #         f"{token} AAVE V2-Nilla LP",
-    #         "na" + str(token),
-    #         DEPOSIT_FEE_BPS,
-    #         WITHDRAW_FEE_BPS
-    #     )
-    #     proxy_impl_aave_v2 = TransparentUpgradeableProxyImpl.deploy(
-    #         impl_aave_v2,
-    #         admin,
-    #         aave_v2_initilize_encoded,
-    #         {'from': deployer}
-    #     )
-    #     aave_v2_lp = Contract.from_abi("AaveV2NillaLendingPool", proxy_impl_aave_v2.address, impl_aave_v2.abi)
-    #     print(f'AAVE V2:- Proxy LP {token}', aave_v2_lp, '\n -----------------------------------------------------')
+    
 
     # ---------- Deploy AAVE V3's ----------
     # impl_aave_v3_no_rewards = AaveV3NillaLendingPoolNoRewards.deploy(
