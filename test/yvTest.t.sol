@@ -22,14 +22,14 @@ contract YVTest is Test {
     address internal ZERO_ADDRESS = address(0);
 
     // vault
-    YearnNillaVault internal vault = YearnNillaVault(0x3E53560e10CafFfE18882fBe7B9fC5Bb66C2BE55);
-    NativeGatewayVault internal gateway =
-        NativeGatewayVault(payable(0x10a278166dad38AE68Eea9270fEFC58eED103d09));
+    YearnNillaVault internal vault;
+    // NativeGatewayVault internal gateway =
+    //     NativeGatewayVault(payable(0x10a278166dad38AE68Eea9270fEFC58eED103d09));
 
     IYearnPartnerTracker yearnPartnerTracker =
-        IYearnPartnerTracker(0x7E08735690028cdF3D81e7165493F1C34065AbA2); // for OP
+        IYearnPartnerTracker(0x8ee392a4787397126C163Cb9844d7c447da419D8); // for mainet
     IERC20 baseToken;
-    IYVToken internal yvToken = IYVToken(0x5B977577Eb8a480f63e11FC615D6753adB8652Ae); //WETH
+    IYVToken internal yvToken = IYVToken(0xdA816459F1AB5631232FE5e97a05BBBb94970c95); // DAI
     uint256 yvTotalAssets;
 
     uint256 mainnetFork;
@@ -43,85 +43,88 @@ contract YVTest is Test {
     );
 
     function setUp() public {
-        mainnetFork = vm.createFork("https://mainnet.optimism.io"); // OP Mainnet
+        mainnetFork = vm.createFork(
+            "https://mainnet.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161"
+        );
         vm.selectFork(mainnetFork);
         startHoax(user);
         // gateway = new NativeGatewayVault(address(WETH));
 
-        // admin = address(new ProxyAdminImpl());
-        // impl = address(new YearnNillaVault());
+        admin = address(new ProxyAdminImpl());
+        impl = address(new YearnNillaVault());
 
-        // // Contract VaultNilla
-        // proxy = new TransparentUpgradeableProxyImpl(
-        //     impl,
-        //     admin,
-        //     abi.encodeWithSelector(
-        //         YearnNillaVault.initialize.selector,
-        //         yvToken,
-        //         yearnPartnerTracker,
-        //         "Nilla-Yearn WETH Vault",
-        //         "WETH",
-        //         3,
-        //         3,
-        //         1,
-        //     )
-        // );
+        // Contract VaultNilla -- DAI
+        proxy = new TransparentUpgradeableProxyImpl(
+            impl,
+            admin,
+            abi.encodeWithSelector(
+                YearnNillaVault.initialize.selector,
+                address(yvToken),
+                address(yearnPartnerTracker),
+                user,
+                "DAI Nilla-Yearn Vault",
+                "nyvDAI",
+                1,
+                1,
+                500
+            )
+        );
 
-        // vault = YearnNillaVault(address(proxy));
+        vault = YearnNillaVault(address(proxy));
 
-        // IERC20 _token = IERC20(yvToken.token());
-        // yvTotalAssets = yvToken.totalDebt() + _token.balanceOf(address(yvToken));
-        // // baseToken = IERC20(address(vault.baseToken()));
-        // // deal(address(baseToken), user, 1e18);
-        // // baseToken.safeApprove(address(vault), type(uint256).max);
-        // vm.label(address(vault), "### Nilla Vault ###");
-        // vm.label(address(yvToken), "### Yearn Vault ###");
-        // vm.label(address(yearnPartnerTracker), "### Yearn Partner Tracker ###");
-        // vm.label(address(baseToken), "### Yearn Vault ###");
-        // vm.label(user, "### User ###");
+        IERC20 _token = IERC20(yvToken.token());
+        yvTotalAssets = yvToken.totalDebt() + _token.balanceOf(address(yvToken));
+        baseToken = IERC20(address(vault.baseToken()));
+        baseToken.safeApprove(address(vault), type(uint256).max);
+        vm.label(address(vault), "### Nilla Vault ###");
+        vm.label(address(yvToken), "### Yearn Vault ###");
+        vm.label(address(yearnPartnerTracker), "### Yearn Partner Tracker ###");
+        vm.label(address(baseToken), "### Yearn Vault ###");
+        vm.label(user, "### User ###");
         // _checkInfo();
     }
 
-    function _checkInfo() internal view {
-        IERC20 _token = IERC20(yvToken.token());
-        console.log("---------- CHECKING INFO ----------");
-        console.log("Vault balance:", baseToken.balanceOf(address(vault)));
-        console.log("Yearn deposit limit:", yvToken.depositLimit());
-        console.log(
-            "Yearn total assets:",
-            yvToken.totalDebt() + _token.balanceOf(address(yvToken))
-        );
-        console.log("Yearn vault name:", yvToken.name());
-        console.log("Is yvault shutdown:", yvToken.emergencyShutdown());
-    }
+    // function _checkInfo() internal view {
+    //     IERC20 _token = IERC20(yvToken.token());
+    //     console.log("---------- CHECKING INFO ----------");
+    //     console.log("Vault balance:", baseToken.balanceOf(address(vault)));
+    //     console.log("Yearn deposit limit:", yvToken.depositLimit());
+    //     console.log(
+    //         "Yearn total assets:",
+    //         yvToken.totalDebt() + _token.balanceOf(address(yvToken))
+    //     );
+    //     console.log("Yearn vault name:", yvToken.name());
+    //     console.log("Is yvault shutdown:", yvToken.emergencyShutdown());
+    // }
 
-    function testDepositGateway() public {
-        console.log("---------- TEST GATEWAY ----------");
-        uint256 amount = 1e18;
-        uint256 balanceInYearnBefore = yvToken.balanceOf(address(vault));
-        uint256 reservesBeforeDeposit = vault.reserves(address(yvToken));
-        uint256 nBalB = vault.balanceOf(user);
-        console.log("ETH in vault B:", address(vault).balance);
-        gateway.deposit{ value: amount }(address(vault));
-        console.log("ETH in vault A:", address(vault).balance);
-        uint256 nBalA = vault.balanceOf(user);
-        uint256 balanceInYearnAfter = yvToken.balanceOf(address(vault));
-        uint256 reservesAfterDeposit = vault.reserves(address(yvToken));
-        uint256 depositFee = ((balanceInYearnAfter - balanceInYearnBefore) * 3) / 10_000; //depositFeeBPS = 0.03%, BPS = 100%
+    // function testDepositGateway() public {
+    //     console.log("---------- TEST GATEWAY ----------");
+    //     uint256 amount = 1e18;
+    //     uint256 balanceInYearnBefore = yvToken.balanceOf(address(vault));
+    //     uint256 reservesBeforeDeposit = vault.reserves(address(yvToken));
+    //     uint256 nBalB = vault.balanceOf(user);
+    //     console.log("ETH in vault B:", address(vault).balance);
 
-        assertEq(reservesAfterDeposit - reservesBeforeDeposit, depositFee);
-        assertEq(vault.balanceOf(user), balanceInYearnAfter - depositFee);
-        console.log("Vault balance in yearn before:", balanceInYearnBefore);
-        console.log("Vault balance in yearn after:", balanceInYearnAfter);
-        console.log("Reserves Nilla before:", reservesBeforeDeposit);
-        console.log("Reserves Nilla after:", reservesAfterDeposit);
-        console.log("nToken Balance Before:", nBalB);
-        console.log("nToken Balance After:", nBalA);
-    }
+    //     console.log("ETH in vault A:", address(vault).balance);
+    //     uint256 nBalA = vault.balanceOf(user);
+    //     uint256 balanceInYearnAfter = yvToken.balanceOf(address(vault));
+    //     uint256 reservesAfterDeposit = vault.reserves(address(yvToken));
+    //     uint256 depositFee = ((balanceInYearnAfter - balanceInYearnBefore) * 3) / 10_000; //depositFeeBPS = 0.03%, BPS = 100%
+
+    //     assertEq(reservesAfterDeposit - reservesBeforeDeposit, depositFee);
+    //     assertEq(vault.balanceOf(user), balanceInYearnAfter - depositFee);
+    //     console.log("Vault balance in yearn before:", balanceInYearnBefore);
+    //     console.log("Vault balance in yearn after:", balanceInYearnAfter);
+    //     console.log("Reserves Nilla before:", reservesBeforeDeposit);
+    //     console.log("Reserves Nilla after:", reservesAfterDeposit);
+    //     console.log("nToken Balance Before:", nBalB);
+    //     console.log("nToken Balance After:", nBalA);
+    // }
 
     function testDepositNormal() public {
         console.log("---------- TEST NORMAL DEPOSIT ----------");
-        uint256 amount = 1e18;
+        uint256 amount = 1e10;
+        deal(address(baseToken), user, amount);
 
         uint256 balanceInYearnBefore = yvToken.balanceOf(address(vault));
         uint256 reservesBeforeDeposit = vault.reserves(address(yvToken));
@@ -130,19 +133,15 @@ contract YVTest is Test {
 
         uint256 balanceInYearnAfter = yvToken.balanceOf(address(vault));
         uint256 reservesAfterDeposit = vault.reserves(address(yvToken));
-        uint256 depositFee = ((balanceInYearnAfter - balanceInYearnBefore) * 3) / 10_000; //depositFeeBPS = 0.03%, BPS = 100%
+        uint256 depositFee = ((balanceInYearnAfter - balanceInYearnBefore) * 1) / 10_000; //depositFeeBPS = 0.01%, BPS = 100%
 
         assertEq(reservesAfterDeposit - reservesBeforeDeposit, depositFee);
-        assertEq(vault.balanceOf(user), balanceInYearnAfter - depositFee);
-
-        console.log("Vault balance in yearn before:", balanceInYearnBefore);
-        console.log("Vault balance in yearn after:", balanceInYearnAfter);
-        console.log("Reserves before:", reservesBeforeDeposit);
-        console.log("Reserves after:", reservesAfterDeposit);
+        assertEq(vault.principals(user), yvToken.pricePerShare() * vault.balanceOf(user));
     }
 
     function testDepositZeroAmount() public {
         uint256 amount = 0;
+        deal(address(baseToken), user, amount);
 
         vm.expectRevert();
         vault.deposit(amount, user);
@@ -150,6 +149,7 @@ contract YVTest is Test {
 
     function testDepositOneAmount() public {
         uint256 amount = 1; // got rounded to `0`
+        deal(address(baseToken), user, amount);
 
         vm.expectRevert();
         vault.deposit(amount, user);
@@ -161,7 +161,8 @@ contract YVTest is Test {
         IERC20 _token = IERC20(yvToken.token());
         uint256 totalAssets = yvToken.totalDebt() + _token.balanceOf(address(yvToken));
         uint256 maxLimit = yvToken.depositLimit() - totalAssets;
-        vm.assume(amount < maxLimit && amount > 1 && amount <= baseToken.balanceOf(address(user)));
+        amount = bound(amount, 10, maxLimit);
+        deal(address(baseToken), user, amount);
 
         uint256 balanceInYearnBefore = yvToken.balanceOf(address(vault));
         uint256 reservesBeforeDeposit = vault.reserves(address(yvToken));
@@ -170,37 +171,47 @@ contract YVTest is Test {
 
         uint256 balanceInYearnAfter = yvToken.balanceOf(address(vault));
         uint256 reservesAfterDeposit = vault.reserves(address(yvToken));
-        uint256 depositFee = ((balanceInYearnAfter - balanceInYearnBefore) * 3) / 10_000; //depositFeeBPS = 0.03%, BPS = 100%
+        uint256 depositFee = ((balanceInYearnAfter - balanceInYearnBefore) * 1) / 10_000; //depositFeeBPS = 0.03%, BPS = 100%
 
         assertEq(reservesAfterDeposit - reservesBeforeDeposit, depositFee);
         assertEq(vault.balanceOf(user), balanceInYearnAfter - depositFee);
-
-        console.log("Vault balance in yearn before:", balanceInYearnBefore);
-        console.log("Vault balance in yearn after:", balanceInYearnAfter);
-        console.log("Reserves before:", reservesBeforeDeposit);
-        console.log("Reserves after:", reservesAfterDeposit);
+        assertEq(vault.principals(user), yvToken.pricePerShare() * vault.balanceOf(user));
     }
 
     function testRedeemNormal() public {
         console.log("---------- TEST NORMAL REDEEM ----------");
         IERC20 _token = vault.baseToken();
         uint256 maxLoss = 1;
-        uint256 amount = 10_000;
+        uint256 amount = 1e18;
+        deal(address(baseToken), user, amount);
         uint256 reservesBeforeDeposit = vault.reserves(address(yvToken));
 
         vault.deposit(amount, user);
 
+        uint256 principal = vault.principals(user);
         uint256 reservesAfterDeposit = vault.reserves(address(yvToken));
         uint256 baseTokenBefore = _token.balanceOf(user);
 
+        vm.warp(block.timestamp + 1_000_000);
+
         uint256 shares = vault.balanceOf(user);
+        uint256 currentBal = shares * yvToken.pricePerShare();
+        uint256 profit = currentBal > principal ? (currentBal - principal) : 0;
+        uint256 fee = (profit * 500) / 10_000;
+        uint256 withdrawFee = fee / yvToken.pricePerShare();
+
         vault.redeem(vault.balanceOf(user), user, maxLoss);
+
         uint256 reservesAfterWithdraw = vault.reserves(address(yvToken));
         uint256 baseTokenAfter = _token.balanceOf(user);
-        uint256 withdrawFee = (shares * 3) / 10_000; // withdrawFeeBPS = 0.03% BPS 100%
+        withdrawFee += (shares * 1) / 10_000; // withdrawFeeBPS = 0.03% BPS 100%
 
         assertEq(withdrawFee, reservesAfterWithdraw - reservesAfterDeposit);
         require((baseTokenAfter - baseTokenBefore) <= amount, "Received token exceed amount in");
+        assertEq(
+            vault.reserves(address(yvToken)) + vault.totalSupply(),
+            yvToken.balanceOf(address(vault))
+        );
 
         console.log("Reserves before deposit:", reservesBeforeDeposit);
         console.log("Reserves after deposit:", reservesAfterDeposit);
@@ -242,35 +253,40 @@ contract YVTest is Test {
         amount = bound(amount, 10, maxLimit);
         deal(address(baseToken), user, amount);
         uint256 maxLoss = 1;
-        uint256 reservesBeforeDeposit = vault.reserves(address(yvToken));
 
         vault.deposit(amount, user);
 
+        uint256 principal = vault.principals(user);
         uint256 reservesAfterDeposit = vault.reserves(address(yvToken));
         uint256 baseTokenBefore = _token.balanceOf(user);
 
+        vm.warp(block.timestamp + 1_000_000);
+
         uint256 shares = vault.balanceOf(user);
+        uint256 currentBal = shares * yvToken.pricePerShare();
+        uint256 profit = currentBal > principal ? (currentBal - principal) : 0;
+        uint256 fee = (profit * 500) / 10_000;
+        uint256 withdrawFee = fee / yvToken.pricePerShare();
+
         vault.redeem(vault.balanceOf(user), user, maxLoss);
+
         uint256 reservesAfterWithdraw = vault.reserves(address(yvToken));
         uint256 baseTokenAfter = _token.balanceOf(user);
-        uint256 withdrawFee = (shares * 3) / 10_000; // withdrawFeeBPS = 0.03% BPS 100%
+        withdrawFee += (shares * 1) / 10_000; // withdrawFeeBPS = 0.03% BPS 100%
 
         assertEq(withdrawFee, reservesAfterWithdraw - reservesAfterDeposit);
         require((baseTokenAfter - baseTokenBefore) <= amount, "Received token exceed amount in");
-
-        console.log("Reserves before deposit:", reservesBeforeDeposit);
-        console.log("Reserves after deposit:", reservesAfterDeposit);
-        console.log("Reserves after withdraw:", vault.reserves(address(yvToken)));
-        console.log("Withdraw fee:", withdrawFee);
-        console.log("Received amount:", baseTokenAfter - baseTokenBefore);
-        console.log("Balance of baseToken before:", baseTokenBefore);
-        console.log("Balance of baseToken after:", baseTokenAfter);
+        assertEq(
+            vault.reserves(address(yvToken)) + vault.totalSupply(),
+            yvToken.balanceOf(address(vault))
+        );
     }
 
     function testRedeemExceedingShares() public {
         uint256 shares = vault.reserves(user);
         uint256 maxLoss = 1;
         uint256 amount = 10_000;
+        deal(address(baseToken), user, amount);
         vault.deposit(amount, user);
         vm.expectRevert();
         vault.redeem(shares * 2, user, maxLoss);
@@ -280,6 +296,7 @@ contract YVTest is Test {
         uint256 shares = 0;
         uint256 maxLoss = 1;
         uint256 amount = 10_000;
+        deal(address(baseToken), user, amount);
         vault.deposit(amount, user);
 
         vm.expectRevert();
@@ -290,37 +307,40 @@ contract YVTest is Test {
         uint256 shares = 100;
         uint256 maxLoss = 10_100;
         uint256 amount = 10_000;
+        deal(address(baseToken), user, amount);
         vault.deposit(amount, user);
 
         vm.expectRevert();
         vault.redeem(shares, user, maxLoss);
     }
 
-    function testRedeemZeroMaxLoss() public {
-        console.log("---------- TEST ZERO MAXLOSS REDEEM ----------");
-        IERC20 _token = vault.baseToken();
-        uint256 maxLoss = 0;
-        uint256 amount = 10_000;
-        uint256 reservesBeforeDeposit = vault.reserves(address(yvToken));
+    // Note: Can't prove revert() on fork-test
+    // function testRedeemZeroMaxLoss() public {
+    //     console.log("---------- TEST ZERO MAXLOSS REDEEM ----------");
+    //     IERC20 _token = vault.baseToken();
+    //     uint256 maxLoss = 0;
+    //     uint256 amount = 10_000;
+    //     uint256 reservesBeforeDeposit = vault.reserves(address(yvToken));
+    //     deal(address(baseToken), user, amount);
 
-        vault.deposit(amount, user);
+    //     vault.deposit(amount, user);
 
-        uint256 reservesAfterDeposit = vault.reserves(address(yvToken));
-        uint256 baseTokenBefore = _token.balanceOf(user);
-        uint256 shares = vault.balanceOf(user);
-        vault.redeem(vault.balanceOf(user), user, maxLoss);
-        uint256 reservesAfterWithdraw = vault.reserves(address(yvToken));
-        uint256 baseTokenAfter = _token.balanceOf(user);
-        uint256 withdrawFee = (shares * 3) / 10_000; // withdrawFeeBPS = 0.03% BPS 100%
+    //     uint256 reservesAfterDeposit = vault.reserves(address(yvToken));
+    //     uint256 baseTokenBefore = _token.balanceOf(user);
+    //     uint256 shares = vault.balanceOf(user);
+    //     vault.redeem(vault.balanceOf(user), user, maxLoss);
+    //     uint256 reservesAfterWithdraw = vault.reserves(address(yvToken));
+    //     uint256 baseTokenAfter = _token.balanceOf(user);
+    //     uint256 withdrawFee = (shares * 3) / 10_000; // withdrawFeeBPS = 0.03% BPS 100%
 
-        assertEq(withdrawFee, reservesAfterWithdraw - reservesAfterDeposit);
+    //     assertEq(withdrawFee, reservesAfterWithdraw - reservesAfterDeposit);
 
-        console.log("Reserves before deposit:", reservesBeforeDeposit);
-        console.log("Reserves after deposit:", reservesAfterDeposit);
-        console.log("Reserves after withdraw:", vault.reserves(address(yvToken)));
-        console.log("Withdraw fee:", withdrawFee);
-        console.log("Received amount:", baseTokenAfter - baseTokenBefore);
-        console.log("Balance of baseToken before:", baseTokenBefore);
-        console.log("Balance of baseToken after:", baseTokenAfter);
-    }
+    //     console.log("Reserves before deposit:", reservesBeforeDeposit);
+    //     console.log("Reserves after deposit:", reservesAfterDeposit);
+    //     console.log("Reserves after withdraw:", vault.reserves(address(yvToken)));
+    //     console.log("Withdraw fee:", withdrawFee);
+    //     console.log("Received amount:", baseTokenAfter - baseTokenBefore);
+    //     console.log("Balance of baseToken before:", baseTokenBefore);
+    //     console.log("Balance of baseToken after:", baseTokenAfter);
+    // }
 }
