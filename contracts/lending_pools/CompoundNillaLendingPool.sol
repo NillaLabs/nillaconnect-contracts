@@ -102,7 +102,7 @@ contract CompoundNillaLendingPool is BaseNillaEarn {
         reserves[address(_cToken)] += depositFee;
         _mint(_receiver, receivedCToken - depositFee);
         // calculate new receiver's principal
-        principals[_receiver] = exchangeRate * balanceOf(_receiver);
+        principals[_receiver] = uint256(_cToken.exchangeRateCurrent()) * balanceOf(_receiver);
         emit Deposit(msg.sender, _receiver, _amount);
         return (receivedCToken - depositFee);
     }
@@ -127,8 +127,6 @@ contract CompoundNillaLendingPool is BaseNillaEarn {
         }
         // burn user's shares
         _burn(_receiver, _shares);
-        // calculate new receiver's principal
-        principals[_receiver] = exchangeRate * balanceOf(_receiver);
         // collect protocol's fee.
         withdrawFee += (_shares * withdrawFeeBPS) / BPS;
         reserves[address(_cToken)] += withdrawFee;
@@ -137,6 +135,8 @@ contract CompoundNillaLendingPool is BaseNillaEarn {
         require(_cToken.redeem(_shares - withdrawFee) == 0, "!redeem");
         uint256 receivedBaseToken = _baseToken.balanceOf(address(this)) - baseTokenBefore;
         _baseToken.safeTransfer(_receiver, receivedBaseToken);
+        // calculate new receiver's principal
+        principals[_receiver] = uint256(_cToken.exchangeRateCurrent()) * balanceOf(_receiver);
         emit Withdraw(msg.sender, _receiver, receivedBaseToken);
         return receivedBaseToken;
     }
