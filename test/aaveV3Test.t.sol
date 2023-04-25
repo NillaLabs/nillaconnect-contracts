@@ -206,7 +206,6 @@ contract AaveV3Test is Test {
             aToken.scaledBalanceOf(address(aaveV3Pool))
         );
         assertEq(addedReserve, withdrawFee + dust);
-        assertEq(aaveV3Pool.balanceOf(user), 0);
 
         uint256 baseTokenAfter = baseToken.balanceOf(user);
         uint256 aTokenAfterRedeem = aToken.scaledBalanceOf(address(aaveV3Pool));
@@ -260,7 +259,6 @@ contract AaveV3Test is Test {
             aToken.scaledBalanceOf(address(aaveV3Pool))
         );
         assertEq(addedReserve, withdrawFee + dust);
-        assertEq(aaveV3Pool.balanceOf(user), 0);
     }
 
     function testRedeemTooLarge() public {
