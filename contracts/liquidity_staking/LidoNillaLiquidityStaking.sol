@@ -50,17 +50,7 @@ contract LidoNillaLiquidityStaking is BaseNillaEarn {
         IstETH _stETH = stETH;
         uint256 principal = principals[_receiver];
         // calculate performance fee
-        uint256 depositFee;
-        if (principal != 0) {
-            // get current balance from share
-            uint256 currentBal = _stETH.getPooledEthByShares(balanceOf(_receiver));
-            // calculate profit from current balance compared to latest known principal
-            uint256 profit = currentBal > principal ? (currentBal - principal) : 0;
-            // calculate performance fee
-            uint256 fee = profit.mulDiv(performanceFeeBPS, BPS);
-            // sum fee into the depositFee, convert to share
-            depositFee = _stETH.getSharesByPooledEth(fee);
-        }
+        uint256 depositFee = _calculatePerformanceFee(_receiver, principal, _stETH);
         // submit to stETH Finance.
         uint256 sharesBefore = _stETH.sharesOf(address(this));
         _stETH.submit{ value: msg.value }(address(this));
@@ -70,7 +60,7 @@ contract LidoNillaLiquidityStaking is BaseNillaEarn {
         reserves[address(_stETH)] += depositFee;
         _mint(_receiver, receivedShares - depositFee);
         // calculate new receiver's principal
-        principals[_receiver] = _stETH.getPooledEthByShares(balanceOf(_receiver));
+        _updateNewPrincipals(_receiver, _stETH);
         emit Deposit(msg.sender, _receiver, msg.value);
         return (receivedShares - depositFee);
     }
@@ -84,17 +74,7 @@ contract LidoNillaLiquidityStaking is BaseNillaEarn {
         IstETH _stETH = stETH;
         uint256 principal = principals[_receiver];
         // calculate performance fee
-        uint256 withdrawFee;
-        if (principal != 0) {
-            // get current balance from share
-            uint256 currentBal = _stETH.getPooledEthByShares(balanceOf(_receiver));
-            // calculate profit from current balance compared to latest known principal
-            uint256 profit = currentBal > principal ? (currentBal - principal) : 0;
-            // calculate performance fee
-            uint256 fee = profit.mulDiv(performanceFeeBPS, BPS);
-            // sum fee into the withdrawFee, convert to share
-            withdrawFee = _stETH.getSharesByPooledEth(fee);
-        }
+        uint256 withdrawFee = _calculatePerformanceFee(_receiver, principal, _stETH);
         // burn user's shares
         _burn(_receiver, _shares);
         // collect protocol's fee
@@ -115,8 +95,32 @@ contract LidoNillaLiquidityStaking is BaseNillaEarn {
         require(success, "!withdraw");
         // calculate new receiver's principal
         // NOTE: Rate that we calculate fee is different from user's rate when withdrawing.
-        principals[_receiver] = _stETH.getPooledEthByShares(balanceOf(_receiver));
+        _updateNewPrincipals(_receiver, _stETH);
         emit Withdraw(msg.sender, _receiver, receivedETH);
         return receivedETH;
+    }
+
+    // internal function to calculate performance fee
+    function _calculatePerformanceFee(
+        address _receiver,
+        uint256 _principal,
+        IstETH _stETH
+    ) internal view returns (uint256 performanceFee) {
+        // get current balance from current shares
+        if (_principal != 0) {
+            // get current balance from share
+            uint256 currentBal = _stETH.getPooledEthByShares(balanceOf(_receiver));
+            // calculate profit from current balance compared to latest known principal
+            uint256 profit = currentBal > _principal ? (currentBal - _principal) : 0;
+            // calculate performance fee
+            uint256 fee = profit.mulDiv(performanceFeeBPS, BPS);
+            // sum fee into the withdrawFee, convert to share
+            performanceFee = _stETH.getSharesByPooledEth(fee);
+        } else performanceFee = 0;
+    }
+
+    // internal function to update receiver's latest principal
+    function _updateNewPrincipals(address _receiver, IstETH _stETH) internal {
+        principals[_receiver] = _stETH.getPooledEthByShares(balanceOf(_receiver));
     }
 }

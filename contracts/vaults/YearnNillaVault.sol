@@ -69,17 +69,7 @@ contract YearnNillaVault is BaseNillaEarn {
         uint256 pricePerShare = _yvToken.pricePerShare();
         uint256 RATE = 10 ** _decimals;
         // calculate performace fee
-        uint256 depositFee;
-        if (principal != 0) {
-            // get current balance from share
-            uint256 currentBal = (pricePerShare * balanceOf(_receiver)) / RATE;
-            // calculate profit from current balance compared to latest known principal
-            uint256 profit = currentBal > principal ? (currentBal - principal) : 0;
-            // calculate performance fee
-            uint256 fee = (profit * performanceFeeBPS) / BPS;
-            // sum fee into the depositFee, convert to share
-            depositFee = fee / pricePerShare / RATE;
-        }
+        uint256 depositFee = _calculatePerformanceFee(_receiver, principal, pricePerShare, RATE);
         // transfer fund.
         uint256 baseTokenBefore = _baseToken.balanceOf(address(this));
         _baseToken.safeTransferFrom(msg.sender, address(this), _amount);
@@ -93,7 +83,7 @@ contract YearnNillaVault is BaseNillaEarn {
         reserves[address(_yvToken)] += depositFee;
         _mint(_receiver, receivedYVToken - depositFee);
         // calculate new receiver's principal
-        principals[_receiver] = ((_yvToken.pricePerShare()) * balanceOf(_receiver)) / RATE;
+        _updateNewPrincipals(_receiver, _yvToken.pricePerShare(), RATE);
         emit Deposit(msg.sender, _receiver, _amount);
         return receivedYVToken - depositFee;
     }
@@ -110,17 +100,7 @@ contract YearnNillaVault is BaseNillaEarn {
         uint256 pricePerShare = _yvToken.pricePerShare();
         uint256 RATE = 10 ** _decimals;
         // calculate performance fee
-        uint256 withdrawFee;
-        if (principal != 0) {
-            // get current balance from share
-            uint256 currentBal = (pricePerShare * balanceOf(_receiver)) / RATE;
-            // calculate profit from current balance compared to latest known principal
-            uint256 profit = currentBal > principal ? (currentBal - principal) : 0;
-            // calculate performance fee
-            uint256 fee = (profit * performanceFeeBPS) / BPS;
-            // sum fee into the withdrawFee, convert to share
-            withdrawFee = fee / pricePerShare / RATE;
-        }
+        uint256 withdrawFee = _calculatePerformanceFee(_receiver, principal, pricePerShare, RATE);
         // burn user's shares
         _burn(_receiver, _shares);
         // collect protocol's fee
@@ -131,8 +111,38 @@ contract YearnNillaVault is BaseNillaEarn {
         _yvToken.withdraw(_shares - withdrawFee, _receiver, _maxLoss);
         uint256 receivedBaseToken = _baseToken.balanceOf(address(this)) - baseTokenBefore;
         // calculate new receiver's principal
-        principals[_receiver] = ((_yvToken.pricePerShare()) * balanceOf(_receiver)) / RATE;
+        _updateNewPrincipals(_receiver, _yvToken.pricePerShare(), RATE);
         emit Withdraw(msg.sender, _receiver, receivedBaseToken, _maxLoss);
         return receivedBaseToken;
+    }
+
+    // internal function to calculate performance fee
+    function _calculatePerformanceFee(
+        address _receiver,
+        uint256 _principal,
+        uint256 _pricePerShare,
+        uint256 _RATE
+    ) internal view returns (uint256 performanceFee) {
+        // get current balance from current shares
+        if (_principal != 0) {
+            // get current balance from share
+            uint256 currentBal = (_pricePerShare * balanceOf(_receiver)) / _RATE;
+            // calculate profit from current balance compared to latest known principal
+            uint256 profit = currentBal > _principal ? (currentBal - _principal) : 0;
+            // calculate performance fee
+            uint256 fee = (profit * performanceFeeBPS) / BPS;
+            // sum fee into the performanceFee, convert to share
+            performanceFee = fee / _pricePerShare / _RATE;
+        } else performanceFee = 0;
+    }
+
+    // internal function to update receiver's latest principal
+    function _updateNewPrincipals(
+        address _receiver,
+        uint256 _pricePerShare,
+        uint256 _RATE
+    ) internal {
+        // update new receiver's principal
+        principals[_receiver] = (_pricePerShare * balanceOf(_receiver)) / _RATE;
     }
 }
