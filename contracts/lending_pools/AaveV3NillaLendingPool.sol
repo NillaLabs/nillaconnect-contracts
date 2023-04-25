@@ -84,21 +84,11 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
         uint256 principal = principals[_receiver];
         uint256 reserveNormalizedIncome = POOL.getReserveNormalizedIncome(address(_baseToken));
         // calculate performance fee
-        uint256 depositFee;
-        // get current balance from current shares
-        if (principal != 0) {
-            uint256 currentBal = balanceOf(_receiver).mulDiv(
-                reserveNormalizedIncome,
-                RAY,
-                Math.Rounding.Down
-            );
-            // calculate profit from current balance compared to latest known principal
-            uint256 profit = currentBal > principal ? (currentBal - principal) : 0;
-            // calculate performance fee
-            uint256 fee = profit.mulDiv(performanceFeeBPS, BPS);
-            // sum fee into the depositFee
-            depositFee = fee.mulDiv(RAY, reserveNormalizedIncome, Math.Rounding.Down);
-        }
+        uint256 depositFee = _calculatePerformanceFee(
+            _receiver,
+            principal,
+            reserveNormalizedIncome
+        );
         // transfer fund.
         uint256 baseTokenBefore = _baseToken.balanceOf(address(this));
         _baseToken.safeTransferFrom(msg.sender, address(this), _amount);
@@ -125,21 +115,11 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
         uint256 principal = principals[_receiver];
         uint256 reserveNormalizedIncome = _pool.getReserveNormalizedIncome(address(_baseToken));
         // calculate performance fee
-        uint256 withdrawFee;
-        if (principal != 0) {
-            // get current balance from current shares
-            uint256 currentBal = balanceOf(_receiver).mulDiv(
-                reserveNormalizedIncome,
-                RAY,
-                Math.Rounding.Down
-            );
-            // calculate profit from current balance compared to latest known principal
-            uint256 profit = currentBal > principal ? (currentBal - principal) : 0;
-            // calculate performance fee
-            uint256 fee = profit.mulDiv(performanceFeeBPS, BPS);
-            // sum fee into the withdrawFee
-            withdrawFee = fee.mulDiv(RAY, reserveNormalizedIncome, Math.Rounding.Down);
-        }
+        uint256 withdrawFee = _calculatePerformanceFee(
+            _receiver,
+            principal,
+            reserveNormalizedIncome
+        );
         // burn user's shares
         _burn(_receiver, _shares);
         // collect protocol's fee.
@@ -234,7 +214,29 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
         emit Reinvest(address(POOL), _amount);
     }
 
-    // NOTE: internal function to avoid stack-too-deep
+    // internal function to calculate performance fee
+    function _calculatePerformanceFee(
+        address _receiver,
+        uint256 _principal,
+        uint256 _reserveNormalizedIncome
+    ) internal view returns (uint256 performanceFee) {
+        // get current balance from current shares
+        if (_principal != 0) {
+            uint256 currentBal = balanceOf(_receiver).mulDiv(
+                _reserveNormalizedIncome,
+                RAY,
+                Math.Rounding.Down
+            );
+            // calculate profit from current balance compared to latest known principal
+            uint256 profit = currentBal > _principal ? (currentBal - _principal) : 0;
+            // calculate performance fee
+            uint256 fee = profit.mulDiv(performanceFeeBPS, BPS);
+            // sum fee into the fee
+            performanceFee = fee.mulDiv(RAY, _reserveNormalizedIncome, Math.Rounding.Down);
+        } else performanceFee = 0;
+    }
+
+    // internal function to update receiver's latest principal
     function _updateNewPrincipals(address _receiver, uint256 _reserveNormalizedIncome) internal {
         // update new receiver's principal
         principals[_receiver] = balanceOf(_receiver).mulDiv(

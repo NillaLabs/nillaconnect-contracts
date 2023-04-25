@@ -154,7 +154,7 @@ contract AaveV2NillaLendingPool is BaseNillaEarn {
             uint256 fee = profit.mulDiv(performanceFeeBPS, BPS);
             // sum fee into the fee
             performanceFee = fee.mulDiv(RAY, _reserveNormalizedIncome, Math.Rounding.Down);
-        }
+        } else performanceFee = 0;
     }
 
     function _updateNewPrincipals(address _receiver, uint256 _reserveNormalizedIncome) internal {

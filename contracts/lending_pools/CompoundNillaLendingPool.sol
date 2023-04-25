@@ -78,17 +78,7 @@ contract CompoundNillaLendingPool is BaseNillaEarn {
         uint256 principal = principals[_receiver];
         uint256 exchangeRate = uint256(_cToken.exchangeRateCurrent());
         // calculate performance fee
-        uint256 depositFee;
-        if (principal != 0) {
-            // get current balance from share
-            uint256 currentBal = (exchangeRate * balanceOf(_receiver)) / 1e18;
-            // calculate profit from current balance compared to latest known principal
-            uint256 profit = currentBal > principal ? (currentBal - principal) : 0;
-            // calculate performance fee
-            uint256 fee = (profit * performanceFeeBPS) / BPS;
-            // sum fee into the depositFee, convert to share
-            depositFee = fee / exchangeRate / 1e18;
-        }
+        uint256 depositFee = _calculatePerformanceFee(_receiver, principal, exchangeRate);
         // transfer fund.
         uint256 baseTokenBefore = _baseToken.balanceOf(address(this));
         _baseToken.safeTransferFrom(msg.sender, address(this), _amount);
@@ -102,9 +92,7 @@ contract CompoundNillaLendingPool is BaseNillaEarn {
         reserves[address(_cToken)] += depositFee;
         _mint(_receiver, receivedCToken - depositFee);
         // calculate new receiver's principal
-        principals[_receiver] =
-            (uint256(_cToken.exchangeRateCurrent()) * balanceOf(_receiver)) /
-            1e18;
+        _updateNewPrincipals(_receiver, uint256(_cToken.exchangeRateCurrent()));
         emit Deposit(msg.sender, _receiver, _amount);
         return (receivedCToken - depositFee);
     }
@@ -116,17 +104,7 @@ contract CompoundNillaLendingPool is BaseNillaEarn {
         uint256 principal = principals[_receiver];
         uint256 exchangeRate = uint256(_cToken.exchangeRateCurrent());
         // calculate performance fee
-        uint256 withdrawFee;
-        if (principal != 0) {
-            // get current balance from share
-            uint256 currentBal = (exchangeRate * balanceOf(_receiver)) / 1e18;
-            // calculate profit from current balance compared to latest known principal
-            uint256 profit = currentBal > principal ? (currentBal - principal) : 0;
-            // calculate performance fee
-            uint256 fee = (profit * performanceFeeBPS) / BPS;
-            // sum fee into the withdrawFee, convert to share
-            withdrawFee = fee / exchangeRate / 1e18;
-        }
+        uint256 withdrawFee = _calculatePerformanceFee(_receiver, principal, exchangeRate);
         // burn user's shares
         _burn(_receiver, _shares);
         // collect protocol's fee.
@@ -138,9 +116,7 @@ contract CompoundNillaLendingPool is BaseNillaEarn {
         uint256 receivedBaseToken = _baseToken.balanceOf(address(this)) - baseTokenBefore;
         _baseToken.safeTransfer(_receiver, receivedBaseToken);
         // calculate new receiver's principal
-        principals[_receiver] =
-            (uint256(_cToken.exchangeRateCurrent()) * balanceOf(_receiver)) /
-            1e18;
+        _updateNewPrincipals(_receiver, uint256(_cToken.exchangeRateCurrent()));
         emit Withdraw(msg.sender, _receiver, receivedBaseToken);
         return receivedBaseToken;
     }
@@ -198,5 +174,30 @@ contract CompoundNillaLendingPool is BaseNillaEarn {
             require(_cToken.mint(receivedBaseToken) == 0, "!mint");
             emit Reinvest(receivedBaseToken);
         }
+    }
+
+    // internal function to calculate performance fee
+    function _calculatePerformanceFee(
+        address _receiver,
+        uint256 _principal,
+        uint256 _exchangeRate
+    ) internal view returns (uint256 performanceFee) {
+        // get current balance from current shares
+        if (_principal != 0) {
+            // get current balance from share
+            uint256 currentBal = (_exchangeRate * balanceOf(_receiver)) / 1e18;
+            // calculate profit from current balance compared to latest known principal
+            uint256 profit = currentBal > _principal ? (currentBal - _principal) : 0;
+            // calculate performance fee
+            uint256 fee = (profit * performanceFeeBPS) / BPS;
+            // sum fee into the performanceFee, convert to share
+            performanceFee = fee / _exchangeRate / 1e18;
+        } else performanceFee = 0;
+    }
+
+    // internal function to update receiver's latest principal
+    function _updateNewPrincipals(address _receiver, uint256 _exchangeRate) internal {
+        // update new receiver's principal
+        principals[_receiver] = (_exchangeRate * balanceOf(_receiver)) / 1e18;
     }
 }
