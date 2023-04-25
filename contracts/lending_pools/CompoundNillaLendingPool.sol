@@ -33,6 +33,7 @@ contract CompoundNillaLendingPool is BaseNillaEarn {
     event Withdraw(address indexed withdrawer, address indexed receiver, uint256 amount);
     event Reinvest(uint256 amount);
     event SetHarvestBot(address indexed newBot);
+    event SetHarvestFeeBPS(uint16 harvestFeeBPS);
 
     function initialize(
         address _cToken,
@@ -69,6 +70,12 @@ contract CompoundNillaLendingPool is BaseNillaEarn {
     function setHarvestBot(address newBot) external onlyOwner {
         HARVEST_BOT = newBot;
         emit SetHarvestBot(newBot);
+    }
+
+    function setHarvestFeeBPS(uint16 _newFee) external onlyOwner {
+        require(_newFee <= 2000, "Harvest fee is too high");
+        harvestFeeBPS = _newFee;
+        emit SetHarvestFeeBPS(_newFee);
     }
 
     function deposit(uint256 _amount, address _receiver) external nonReentrant returns (uint256) {

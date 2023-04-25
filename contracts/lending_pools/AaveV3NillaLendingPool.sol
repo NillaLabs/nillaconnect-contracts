@@ -37,6 +37,7 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
     event Withdraw(address indexed withdrawer, address indexed receiver, uint256 amount);
     event Reinvest(address indexed POOL, uint256 amount);
     event SetHarvestBot(address indexed newBot);
+    event SetHarvestFeeBPS(uint16 harvestFeeBPS);
 
     function initialize(
         address _aToken,
@@ -72,9 +73,15 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
         return _decimals;
     }
 
-    function setHarvestBot(address newBot) external onlyOwner {
-        HARVEST_BOT = newBot;
-        emit SetHarvestBot(newBot);
+    function setHarvestBot(address _newBot) external onlyOwner {
+        HARVEST_BOT = _newBot;
+        emit SetHarvestBot(_newBot);
+    }
+
+    function setHarvestFeeBPS(uint16 _newFee) external onlyOwner {
+        require(_newFee <= 2000, "Harvest fee is too high");
+        harvestFeeBPS = _newFee;
+        emit SetHarvestFeeBPS(_newFee);
     }
 
     function deposit(uint256 _amount, address _receiver) external nonReentrant returns (uint256) {
