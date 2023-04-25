@@ -66,18 +66,19 @@ contract YearnNillaVault is BaseNillaEarn {
         IERC20 _baseToken = baseToken;
         IYVToken _yvToken = yvToken;
         uint256 principal = principals[_receiver];
-        uint256 pricePerShare = _yvToken.pricePerShare() / (10 ** _decimals);
+        uint256 pricePerShare = _yvToken.pricePerShare();
+        uint256 RATE = 10 ** _decimals;
         // calculate performace fee
         uint256 depositFee;
         if (principal != 0) {
             // get current balance from share
-            uint256 currentBal = pricePerShare * balanceOf(_receiver);
+            uint256 currentBal = (pricePerShare * balanceOf(_receiver)) / RATE;
             // calculate profit from current balance compared to latest known principal
             uint256 profit = currentBal > principal ? (currentBal - principal) : 0;
             // calculate performance fee
             uint256 fee = (profit * performanceFeeBPS) / BPS;
             // sum fee into the depositFee, convert to share
-            depositFee = fee / pricePerShare;
+            depositFee = fee / pricePerShare / RATE;
         }
         // transfer fund.
         uint256 baseTokenBefore = _baseToken.balanceOf(address(this));
@@ -92,9 +93,7 @@ contract YearnNillaVault is BaseNillaEarn {
         reserves[address(_yvToken)] += depositFee;
         _mint(_receiver, receivedYVToken - depositFee);
         // calculate new receiver's principal
-        principals[_receiver] =
-            ((_yvToken.pricePerShare()) * balanceOf(_receiver)) /
-            (10 ** _decimals);
+        principals[_receiver] = ((_yvToken.pricePerShare()) * balanceOf(_receiver)) / RATE;
         emit Deposit(msg.sender, _receiver, _amount);
         return receivedYVToken - depositFee;
     }
@@ -108,18 +107,19 @@ contract YearnNillaVault is BaseNillaEarn {
         IERC20 _baseToken = baseToken;
         IYVToken _yvToken = yvToken;
         uint256 principal = principals[_receiver];
-        uint256 pricePerShare = _yvToken.pricePerShare() / (10 ** _decimals);
+        uint256 pricePerShare = _yvToken.pricePerShare();
+        uint256 RATE = 10 ** _decimals;
         // calculate performance fee
         uint256 withdrawFee;
         if (principal != 0) {
             // get current balance from share
-            uint256 currentBal = pricePerShare * balanceOf(_receiver);
+            uint256 currentBal = (pricePerShare * balanceOf(_receiver)) / RATE;
             // calculate profit from current balance compared to latest known principal
             uint256 profit = currentBal > principal ? (currentBal - principal) : 0;
             // calculate performance fee
             uint256 fee = (profit * performanceFeeBPS) / BPS;
             // sum fee into the withdrawFee, convert to share
-            withdrawFee = fee / pricePerShare;
+            withdrawFee = fee / pricePerShare / RATE;
         }
         // burn user's shares
         _burn(_receiver, _shares);
@@ -131,9 +131,7 @@ contract YearnNillaVault is BaseNillaEarn {
         _yvToken.withdraw(_shares - withdrawFee, _receiver, _maxLoss);
         uint256 receivedBaseToken = _baseToken.balanceOf(address(this)) - baseTokenBefore;
         // calculate new receiver's principal
-        principals[_receiver] =
-            ((_yvToken.pricePerShare()) * balanceOf(_receiver)) /
-            (10 ** _decimals);
+        principals[_receiver] = ((_yvToken.pricePerShare()) * balanceOf(_receiver)) / RATE;
         emit Withdraw(msg.sender, _receiver, receivedBaseToken, _maxLoss);
         return receivedBaseToken;
     }
