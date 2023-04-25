@@ -76,18 +76,18 @@ contract CompoundNillaLendingPool is BaseNillaEarn {
         IERC20 _baseToken = baseToken;
         ICToken _cToken = cToken;
         uint256 principal = principals[_receiver];
-        uint256 exchangeRate = uint256(_cToken.exchangeRateCurrent()) / 1e18;
+        uint256 exchangeRate = uint256(_cToken.exchangeRateCurrent());
         // calculate performance fee
         uint256 depositFee;
         if (principal != 0) {
             // get current balance from share
-            uint256 currentBal = exchangeRate * balanceOf(_receiver);
+            uint256 currentBal = (exchangeRate * balanceOf(_receiver)) / 1e18;
             // calculate profit from current balance compared to latest known principal
             uint256 profit = currentBal > principal ? (currentBal - principal) : 0;
             // calculate performance fee
             uint256 fee = (profit * performanceFeeBPS) / BPS;
             // sum fee into the depositFee, convert to share
-            depositFee = fee / exchangeRate;
+            depositFee = fee / exchangeRate / 1e18;
         }
         // transfer fund.
         uint256 baseTokenBefore = _baseToken.balanceOf(address(this));
@@ -114,18 +114,18 @@ contract CompoundNillaLendingPool is BaseNillaEarn {
         IERC20 _baseToken = baseToken;
         ICToken _cToken = cToken;
         uint256 principal = principals[_receiver];
-        uint256 exchangeRate = uint256(_cToken.exchangeRateCurrent()) / 1e18;
+        uint256 exchangeRate = uint256(_cToken.exchangeRateCurrent());
         // calculate performance fee
         uint256 withdrawFee;
         if (principal != 0) {
             // get current balance from share
-            uint256 currentBal = exchangeRate * balanceOf(_receiver);
+            uint256 currentBal = (exchangeRate * balanceOf(_receiver)) / 1e18;
             // calculate profit from current balance compared to latest known principal
             uint256 profit = currentBal > principal ? (currentBal - principal) : 0;
             // calculate performance fee
             uint256 fee = (profit * performanceFeeBPS) / BPS;
             // sum fee into the withdrawFee, convert to share
-            withdrawFee = fee / exchangeRate;
+            withdrawFee = fee / exchangeRate / 1e18;
         }
         // burn user's shares
         _burn(_receiver, _shares);
