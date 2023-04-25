@@ -198,14 +198,14 @@ contract YVTest is Test {
 
         vm.warp(block.timestamp + 1_000_000);
 
-        uint256 shares = vault.balanceOf(user);
+        uint256 shares = vault.balanceOf(user) / 2;
         uint256 currentBal = (shares * yvToken.pricePerShare()) / RATE;
         uint256 profit = currentBal > principal ? (currentBal - principal) : 0;
         uint256 fee = (profit * 500) / 10_000;
         uint256 withdrawFee = fee / yvToken.pricePerShare() / RATE;
         withdrawFee += (shares * 1) / 10_000; // withdrawFeeBPS = 0.03% BPS 100%
 
-        vault.redeem(vault.balanceOf(user), user, maxLoss);
+        vault.redeem(shares, user, maxLoss);
 
         uint256 reservesAfterWithdraw = vault.reserves(address(yvToken));
         uint256 baseTokenAfter = _token.balanceOf(user);
@@ -266,13 +266,13 @@ contract YVTest is Test {
 
         vm.warp(block.timestamp + 1_000_000);
 
-        uint256 shares = vault.balanceOf(user);
+        uint256 shares = vault.balanceOf(user) / 2;
         uint256 currentBal = (shares * yvToken.pricePerShare()) / RATE;
         uint256 profit = currentBal > principal ? (currentBal - principal) : 0;
         uint256 fee = (profit * 500) / 10_000;
         uint256 withdrawFee = fee / yvToken.pricePerShare() / RATE;
 
-        vault.redeem(vault.balanceOf(user), user, maxLoss);
+        vault.redeem(shares, user, maxLoss);
 
         uint256 reservesAfterWithdraw = vault.reserves(address(yvToken));
         uint256 baseTokenAfter = _token.balanceOf(user);

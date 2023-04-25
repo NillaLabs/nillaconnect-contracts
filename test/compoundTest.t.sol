@@ -89,7 +89,7 @@ contract CompoundTest is Test {
         );
         assertEq(
             nilla.principals(user),
-            uint256(cToken.exchangeRateCurrent()) * nilla.balanceOf(user)
+            (uint256(cToken.exchangeRateCurrent()) * nilla.balanceOf(user)) / 1e18
         );
     }
 
@@ -115,7 +115,7 @@ contract CompoundTest is Test {
         );
         assertEq(
             nilla.principals(user),
-            uint256(cToken.exchangeRateCurrent()) * nilla.balanceOf(user)
+            (uint256(cToken.exchangeRateCurrent()) * nilla.balanceOf(user)) / 1e18
         );
     }
 
@@ -134,15 +134,15 @@ contract CompoundTest is Test {
 
         uint256 principal = nilla.principals(user);
         uint256 reserveBefore = nilla.reserves(address(cToken));
-        uint256 shares = nilla.balanceOf(user);
+        uint256 shares = nilla.balanceOf(user) / 2;
         uint256 withdrawFee = (shares * 1) / 10_000;
 
         vm.roll(block.number + 20);
 
-        uint256 currentBal = nilla.balanceOf(user) * uint256(cToken.exchangeRateCurrent());
+        uint256 currentBal = (nilla.balanceOf(user) * uint256(cToken.exchangeRateCurrent())) / 1e18;
         uint256 profit = currentBal > principal ? (currentBal - principal) : 0;
         uint256 fee = (profit * 500) / 10_000;
-        withdrawFee += fee / uint256(cToken.exchangeRateCurrent());
+        withdrawFee += fee / uint256(cToken.exchangeRateCurrent()) / 1e18;
 
         nilla.redeem(shares, user);
 
@@ -155,7 +155,7 @@ contract CompoundTest is Test {
         );
         assertEq(
             nilla.principals(user),
-            uint256(cToken.exchangeRateCurrent()) * nilla.balanceOf(user)
+            (uint256(cToken.exchangeRateCurrent()) * nilla.balanceOf(user)) / 1e18
         );
     }
 
@@ -166,15 +166,15 @@ contract CompoundTest is Test {
 
         uint256 principal = nilla.principals(user);
         uint256 reserveBefore = nilla.reserves(address(cToken));
-        uint256 shares = nilla.balanceOf(user);
+        uint256 shares = nilla.balanceOf(user) / 2;
         uint256 withdrawFee = (shares * 1) / 10_000;
 
         vm.roll(block.number + 20);
 
-        uint256 currentBal = nilla.balanceOf(user) * uint256(cToken.exchangeRateCurrent());
+        uint256 currentBal = (nilla.balanceOf(user) * uint256(cToken.exchangeRateCurrent())) / 1e18;
         uint256 profit = currentBal > principal ? (currentBal - principal) : 0;
         uint256 fee = (profit * 500) / 10_000;
-        withdrawFee += fee / uint256(cToken.exchangeRateCurrent());
+        withdrawFee += fee / uint256(cToken.exchangeRateCurrent()) / 1e18;
 
         nilla.redeem(shares, user);
 
@@ -187,7 +187,7 @@ contract CompoundTest is Test {
         );
         assertEq(
             nilla.principals(user),
-            uint256(cToken.exchangeRateCurrent()) * nilla.balanceOf(user)
+            (uint256(cToken.exchangeRateCurrent()) * nilla.balanceOf(user)) / 1e18
         );
     }
 

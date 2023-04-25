@@ -121,7 +121,7 @@ contract LidoTest is Test {
 
         vm.warp(block.timestamp + 1_000_000);
 
-        uint256 shares = nilla.balanceOf(user); // Redeem total shares
+        uint256 shares = nilla.balanceOf(user) / 2; // Redeem half shares
         uint256 withdrawFee = (shares * 1) / 10_000;
         uint256 reserveBefore = nilla.reserves(address(lido));
 
@@ -152,7 +152,7 @@ contract LidoTest is Test {
 
         vm.warp(block.timestamp + 1_000_000);
 
-        uint256 shares = nilla.balanceOf(user); // Redeem total shares
+        uint256 shares = nilla.balanceOf(user) / 2; // Redeem total shares
         uint256 withdrawFee = (shares * 1) / 10_000;
         uint256 reserveBefore = nilla.reserves(address(lido));
 

@@ -170,7 +170,7 @@ contract AaveV3Test is Test {
         aaveV3Pool.deposit(amount, user);
         uint256 principal = aaveV3Pool.principals(user);
         uint256 aTokenAfterDeposit = aToken.scaledBalanceOf(address(aaveV3Pool));
-        uint256 shares = aaveV3Pool.balanceOf(user); // Redeem total shares
+        uint256 shares = aaveV3Pool.balanceOf(user) / 2; // Redeem half shares
         uint256 withdrawFee = shares.mulDiv(1, 10_000);
         uint256 reserveBefore = aaveV3Pool.reserves(address(aToken));
 
@@ -223,7 +223,7 @@ contract AaveV3Test is Test {
         deal(address(baseToken), user, amount);
         aaveV3Pool.deposit(amount, user);
         uint256 principal = aaveV3Pool.principals(user);
-        uint256 shares = aaveV3Pool.balanceOf(user); // Redeem total shares
+        uint256 shares = aaveV3Pool.balanceOf(user) / 2; // Redeem half shares
         uint256 aTokenAfterDeposit = aToken.scaledBalanceOf(address(aaveV3Pool));
         uint256 withdrawFee = shares.mulDiv(1, 10_000);
         uint256 reserveBefore = aaveV3Pool.reserves(address(aToken));
