@@ -76,3 +76,7 @@ def main():
         YearnNillaVault.at(nyv_token).setPerformanceFeeBPS(
             PERFORMANCE_FEE_BPS, {"from": deployer}
         )
+
+        TransparentUpgradeableProxyImpl.publish_source(
+            TransparentUpgradeableProxyImpl.at(nyv_token)
+        )
