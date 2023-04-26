@@ -6,8 +6,7 @@ from brownie import Contract, accounts
 from brownie import ProxyAdminImpl, YearnNillaVault, TransparentUpgradeableProxyImpl
 from scripts.utils.utils import *
 
-# network.gas_price("2 gwei")
-# network.max_fee("4 gwei")
+network.gas_price("0.001 gwei")
 
 load_dotenv()
 
@@ -30,8 +29,8 @@ WETH = data_address[CHAIN_ID]["WETH"]
 AAVE_V3_POOL = data_address[CHAIN_ID]["AAVEV3_POOL"]
 YEARN_PARTNER_TRACKER = data_address[CHAIN_ID]["YEARN_PARTNER_TRACKER"]
 
-DEPOSIT_FEE_BPS = 3
-WITHDRAW_FEE_BPS = 3
+DEPOSIT_FEE_BPS = 0
+WITHDRAW_FEE_BPS = 0
 PERFORMANCE_FEE_BPS = 500  # 5%
 
 MULTISIG_WALLET = "0x6f650AE486eFc27BeEFb8Dc84000F63acA99735f"  # OP's
