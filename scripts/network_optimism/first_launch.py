@@ -56,7 +56,7 @@ def main():
 
     # ---------- Deploy AAVE V3's ----------
     impl_aave_v3_no_rewards = AaveV3NillaLendingPoolNoRewards.deploy(
-        WETH, AAVE_V3_POOL, {"from": accounts[0]}
+        WETH, AAVE_V3_POOL, {"from": accounts[0]}, publish_source=True
     )
 
     for token in aave_v3_address:
@@ -75,6 +75,7 @@ def main():
             aave_v3_initilize_encoded,
             WETH,
             {"from": accounts[0]},
+            publish_source=True,
         )
         aave_v3_lp = Contract.from_abi(
             "AaveV3NillaLendingPool",

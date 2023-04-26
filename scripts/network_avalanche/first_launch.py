@@ -47,12 +47,16 @@ WORKER_BOT = "0x6f650AE486eFc27BeEFb8Dc84000F63acA99735f"  # NOTE Change later
 
 def main():
     # Can globally deploy once for each network!
-    admin = ProxyAdminImpl.deploy({"from": deployer})
-    gateway = NativeGateway.deploy(WETH, {"from": deployer})
+    admin = ProxyAdminImpl.deploy({"from": deployer}, publish_source=True)
+    gateway = NativeGateway.deploy(WETH, {"from": deployer}, publish_source=True)
 
     # ---------- Deploy AAVE V3's ----------
     impl_aave_v3 = AaveV3NillaLendingPool.deploy(
-        AAVE_V3_REWARDS_CONTROLLER, WETH, AAVE_V3_POOL, {"from": deployer}
+        AAVE_V3_REWARDS_CONTROLLER,
+        WETH,
+        AAVE_V3_POOL,
+        {"from": deployer},
+        publish_source=True,
     )
     for token in aave_v3_address:
         aave_v3_initilize_encoded = encode_function_data(
@@ -68,7 +72,12 @@ def main():
             PERFORMANCE_FEE_BPS,
         )
         proxy_impl_aave_v3 = TransparentUpgradeableProxyImplNative.deploy(
-            impl_aave_v3, admin, aave_v3_initilize_encoded, WETH, {"from": deployer}
+            impl_aave_v3,
+            admin,
+            aave_v3_initilize_encoded,
+            WETH,
+            {"from": deployer},
+            publish_source=True,
         )
         aave_v3_lp = Contract.from_abi(
             "AaveV3NillaLendingPool", proxy_impl_aave_v3.address, impl_aave_v3.abi

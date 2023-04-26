@@ -59,9 +59,11 @@ MULTISIG_WALLET = "0x6f650AE486eFc27BeEFb8Dc84000F63acA99735f"  # NOTE Change la
 
 def main():
     # Can globally deploy once for each network!
-    admin = ProxyAdminImpl.deploy({"from": deployer})
-    gateway = NativeGateway.deploy(WETH, {"from": deployer})
-    gateway_vault = NativeGatewayVault.deploy(WETH, {"from": deployer})
+    admin = ProxyAdminImpl.deploy({"from": deployer}, publish_source=True)
+    gateway = NativeGateway.deploy(WETH, {"from": deployer}, publish_source=True)
+    gateway_vault = NativeGatewayVault.deploy(
+        WETH, {"from": deployer}, publish_source=True
+    )
 
     # ---------- Deploy Yearn's ----------
     impl_yearn = YearnNillaVault.deploy({"from": deployer})
@@ -78,7 +80,11 @@ def main():
             PERFORMANCE_FEE_BPS,
         )
         proxy_impl_yearn = TransparentUpgradeableProxyImpl.deploy(
-            impl_yearn, admin, yearn_initilize_encoded, {"from": deployer}
+            impl_yearn,
+            admin,
+            yearn_initilize_encoded,
+            {"from": deployer},
+            publish_source=True,
         )
         yearn_vault = Contract.from_abi(
             "YearnNillaVault", proxy_impl_yearn.address, impl_yearn.abi
@@ -91,7 +97,7 @@ def main():
 
     # ---------- Deploy Lido's ----------
     impl_lido = LidoNillaLiquidityStaking.deploy(
-        lido_address["STETH"], {"from": deployer}
+        lido_address["STETH"], {"from": deployer}, publish_source=True
     )
     lido_initilize_encoded = encode_function_data(
         impl_lido.initialize,
@@ -108,6 +114,7 @@ def main():
         lido_initilize_encoded,
         lido_address["CURVE_POOL"],  # accept WETH from pool
         {"from": deployer},
+        publish_source=True,
     )
     lido_liquidstaking = Contract.from_abi(
         "LidoNillaLiquidityStaking", proxy_impl_lido.address, impl_lido.abi

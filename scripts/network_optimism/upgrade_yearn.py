@@ -39,7 +39,7 @@ accounts[0].transfer(deployer, "10 ethers")
 
 
 def main():
-    impl = YearnNillaVault.deploy({"from": deployer})
+    impl = YearnNillaVault.deploy({"from": deployer}, publish_source=True)
     admin = ProxyAdminImpl.at("0x85774d5Fc82EDC9633624c009F0edfAD2DDebA1C")
     for nyv_token in [
         "0x676CF057e8e275df4FCFc5d72e6a334336C28069",
