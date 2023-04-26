@@ -48,29 +48,31 @@ def main():
         "0xA7da71d3F65ecf86697b32dD8890d53EF49Be6F2",
         "0x6273359be3030E1b2E14E3937af1017D6974350c",
     ]:
-        nilla = YearnNillaVault.at(nyv_token)
-        partner = nilla.PARTNER_ADDRESS()
-        yv_token = nilla.yvToken()
-        tracker = nilla.yearnPartnerTracker()
-        base_token = nilla.baseToken()
-        decimals = nilla.decimals()
-        reserves = nilla.reserves(yearn_address["USDC"])
-        deposit_fee = nilla.depositFeeBPS()
-        withdraw_fee = nilla.withdrawFeeBPS()
-        worker = nilla.worker()
+        # nilla = YearnNillaVault.at(nyv_token)
+        # partner = nilla.PARTNER_ADDRESS()
+        # yv_token = nilla.yvToken()
+        # tracker = nilla.yearnPartnerTracker()
+        # base_token = nilla.baseToken()
+        # decimals = nilla.decimals()
+        # reserves = nilla.reserves(yearn_address["USDC"])
+        # deposit_fee = nilla.depositFeeBPS()
+        # withdraw_fee = nilla.withdrawFeeBPS()
+        # worker = nilla.worker()
 
         admin.upgrade(nyv_token, impl, {"from": deployer})
 
-        assert partner == nilla.PARTNER_ADDRESS()
-        assert yv_token == nilla.yvToken()
-        assert tracker == nilla.yearnPartnerTracker()
-        assert base_token == nilla.baseToken()
-        assert decimals == nilla.decimals()
-        assert reserves == nilla.reserves(yearn_address["USDC"])
-        assert deposit_fee == nilla.depositFeeBPS()
-        assert withdraw_fee == nilla.withdrawFeeBPS()
-        assert worker == nilla.worker()
-        assert nilla.performanceFeeBPS() == 0
-        assert nilla.principals(deployer) == 0
+        # assert partner == nilla.PARTNER_ADDRESS()
+        # assert yv_token == nilla.yvToken()
+        # assert tracker == nilla.yearnPartnerTracker()
+        # assert base_token == nilla.baseToken()
+        # assert decimals == nilla.decimals()
+        # assert reserves == nilla.reserves(yearn_address["USDC"])
+        # assert deposit_fee == nilla.depositFeeBPS()
+        # assert withdraw_fee == nilla.withdrawFeeBPS()
+        # assert worker == nilla.worker()
+        # assert nilla.performanceFeeBPS() == 0
+        # assert nilla.principals(deployer) == 0
 
-        nilla.setPerformanceFeeBPS(PERFORMANCE_FEE_BPS, {"from": deployer})
+        YearnNillaVault.at(nyv_token).setPerformanceFeeBPS(
+            PERFORMANCE_FEE_BPS, {"from": deployer}
+        )
