@@ -60,12 +60,11 @@ contract AaveV3NillaLendingPoolNoRewards is BaseNillaEarn {
         IAaveLendingPoolV3 _POOL = POOL;
         IAToken _aToken = aToken;
         uint256 principal = principals[_receiver];
-        uint256 reserveNormalizedIncome = _POOL.getReserveNormalizedIncome(address(_baseToken));
         // calculate performance fee
         uint256 depositFee = _calculatePerformanceFee(
             _receiver,
             principal,
-            reserveNormalizedIncome
+            _POOL.getReserveNormalizedIncome(address(_baseToken))
         );
         // transfer fund.
         uint256 baseTokenBefore = _baseToken.balanceOf(address(this));
