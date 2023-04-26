@@ -52,7 +52,8 @@ contract CompoundTest is Test {
                 "ncDAI",
                 1,
                 1,
-                1
+                1,
+                500
             ),
             WETH
         );
@@ -73,15 +74,23 @@ contract CompoundTest is Test {
 
         uint256 balanceBefore = cToken.balanceOf(address(nilla));
         uint256 reservesBefore = nilla.reserves(address(cToken));
-        
+
         nilla.deposit(amount, user);
 
         uint256 balanceAfter = cToken.balanceOf(address(nilla));
         uint256 reservesAfter = nilla.reserves(address(cToken));
-        uint256 depositFee = (balanceAfter - balanceBefore) * 1 / 10_000;  //depositFeeBPS = 0.01%, BPS = 100%
+        uint256 depositFee = ((balanceAfter - balanceBefore) * 1) / 10_000; //depositFeeBPS = 0.01%, BPS = 100%
 
         assertEq(reservesAfter - reservesBefore, depositFee);
         assertEq(nilla.balanceOf(user), balanceAfter - depositFee);
+        assertEq(
+            nilla.reserves(address(cToken)) + nilla.totalSupply(),
+            cToken.balanceOf(address(nilla))
+        );
+        assertEq(
+            nilla.principals(user),
+            (uint256(cToken.exchangeRateCurrent()) * nilla.balanceOf(user)) / 1e18
+        );
     }
 
     function testFuzzyDeposit(uint256 amount) public {
@@ -90,15 +99,24 @@ contract CompoundTest is Test {
 
         uint256 balanceBefore = cToken.balanceOf(address(nilla));
         uint256 reservesBefore = nilla.reserves(address(cToken));
-        
+
         nilla.deposit(amount, user);
 
         uint256 balanceAfter = cToken.balanceOf(address(nilla));
         uint256 reservesAfter = nilla.reserves(address(cToken));
-        uint256 depositFee = (balanceAfter - balanceBefore) * 1 / 10_000;  //depositFeeBPS = 0.01%, BPS = 100%
+        uint256 depositFee = ((balanceAfter - balanceBefore) * 1) / 10_000; //depositFeeBPS = 0.01%, BPS = 100%
 
         assertEq(reservesAfter - reservesBefore, depositFee);
         assertEq(nilla.balanceOf(user), balanceAfter - depositFee);
+        assertEq(reservesAfter - reservesBefore, depositFee);
+        assertEq(
+            nilla.reserves(address(cToken)) + nilla.totalSupply(),
+            cToken.balanceOf(address(nilla))
+        );
+        assertEq(
+            nilla.principals(user),
+            (uint256(cToken.exchangeRateCurrent()) * nilla.balanceOf(user)) / 1e18
+        );
     }
 
     function testDepositToZeroAddress() public {
@@ -111,22 +129,34 @@ contract CompoundTest is Test {
     function testRedeemNormal() public {
         uint256 amount = 1e18;
         deal(address(baseToken), user, amount);
-        console.log("Before D:", baseToken.balanceOf(user));
-        nilla.deposit(amount, user);
-        console.log("After D / Before R:", baseToken.balanceOf(user));
-        uint256 reserveBefore = nilla.reserves(address(cToken));
-        uint256 shares = nilla.balanceOf(user);
-        uint256 withdrawFee = shares * 1 / 10_000;
 
-        console.log("User's shares:", shares);
-        console.log("Nilla's shares:", cToken.balanceOf(address(nilla)));
+        nilla.deposit(amount, user);
+
+        uint256 principal = nilla.principals(user);
+        uint256 reserveBefore = nilla.reserves(address(cToken));
+        uint256 shares = nilla.balanceOf(user) / 2;
+        uint256 withdrawFee = (shares * 1) / 10_000;
 
         vm.roll(block.number + 20);
 
+        uint256 currentBal = (nilla.balanceOf(user) * uint256(cToken.exchangeRateCurrent())) / 1e18;
+        uint256 profit = currentBal > principal ? (currentBal - principal) : 0;
+        uint256 fee = (profit * 500) / 10_000;
+        withdrawFee += (fee * 1e18) / uint256(cToken.exchangeRateCurrent());
+
         nilla.redeem(shares, user);
-        console.log("After  R:", baseToken.balanceOf(user));
+
         uint256 reserveAfter = nilla.reserves(address(cToken));
+
         assertEq(reserveAfter - reserveBefore, withdrawFee);
+        assertEq(
+            nilla.reserves(address(cToken)) + nilla.totalSupply(),
+            cToken.balanceOf(address(nilla))
+        );
+        assertEq(
+            nilla.principals(user),
+            (uint256(cToken.exchangeRateCurrent()) * nilla.balanceOf(user)) / 1e18
+        );
     }
 
     function testFuzzyRedeem(uint256 amount) public {
@@ -134,14 +164,31 @@ contract CompoundTest is Test {
         deal(address(baseToken), user, amount);
         nilla.deposit(amount, user);
 
+        uint256 principal = nilla.principals(user);
         uint256 reserveBefore = nilla.reserves(address(cToken));
-        uint256 shares = nilla.balanceOf(user);
-        uint256 withdrawFee = shares * 1 / 10_000;
+        uint256 shares = nilla.balanceOf(user) / 2;
+        uint256 withdrawFee = (shares * 1) / 10_000;
 
         vm.roll(block.number + 20);
+
+        uint256 currentBal = (nilla.balanceOf(user) * uint256(cToken.exchangeRateCurrent())) / 1e18;
+        uint256 profit = currentBal > principal ? (currentBal - principal) : 0;
+        uint256 fee = (profit * 500) / 10_000;
+        withdrawFee += (fee * 1e18) / uint256(cToken.exchangeRateCurrent());
+
         nilla.redeem(shares, user);
+
         uint256 reserveAfter = nilla.reserves(address(cToken));
+
         assertEq(reserveAfter - reserveBefore, withdrawFee);
+        assertEq(
+            nilla.reserves(address(cToken)) + nilla.totalSupply(),
+            cToken.balanceOf(address(nilla))
+        );
+        assertEq(
+            nilla.principals(user),
+            (uint256(cToken.exchangeRateCurrent()) * nilla.balanceOf(user)) / 1e18
+        );
     }
 
     function testReinvest() public {
@@ -164,10 +211,10 @@ contract CompoundTest is Test {
         uint256 _deadline = block.timestamp + 1000;
 
         uint256 compAmount = IERC20(nilla.COMP()).balanceOf(address(nilla));
-        uint256 minCompAmount = compAmount * 9 / 10;
+        uint256 minCompAmount = (compAmount * 9) / 10;
 
         uint256 botBalanceB = bot.balance;
-        nilla.reinvest(minCompAmount, minCompAmount * 1 / 10_000, _path, _deadline);
+        nilla.reinvest(minCompAmount, (minCompAmount * 1) / 10_000, _path, _deadline);
         uint256 botBalanceA = bot.balance;
         uint256 cTokenAfterReinvest = cToken.balanceOf(address(nilla));
 

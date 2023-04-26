@@ -48,14 +48,19 @@ contract LidoNillaLiquidityStaking is BaseNillaEarn {
     function deposit(address _receiver) external payable nonReentrant returns (uint256) {
         // gas saving
         IstETH _stETH = stETH;
+        uint256 principal = principals[_receiver];
+        // calculate performance fee
+        uint256 depositFee = _calculatePerformanceFee(_receiver, principal, _stETH);
         // submit to stETH Finance.
         uint256 sharesBefore = _stETH.sharesOf(address(this));
         _stETH.submit{ value: msg.value }(address(this));
         uint256 receivedShares = _stETH.sharesOf(address(this)) - sharesBefore;
         // collect protocol's fee.
-        uint256 depositFee = (receivedShares * depositFeeBPS) / BPS;
+        depositFee += (receivedShares * depositFeeBPS) / BPS;
         reserves[address(_stETH)] += depositFee;
         _mint(_receiver, receivedShares - depositFee);
+        // calculate new receiver's principal
+        _updateNewPrincipals(_receiver, _stETH);
         emit Deposit(msg.sender, _receiver, msg.value);
         return (receivedShares - depositFee);
     }
@@ -67,10 +72,13 @@ contract LidoNillaLiquidityStaking is BaseNillaEarn {
     ) external nonReentrant returns (uint256) {
         // gas saving
         IstETH _stETH = stETH;
+        uint256 principal = principals[_receiver];
+        // calculate performance fee
+        uint256 withdrawFee = _calculatePerformanceFee(_receiver, principal, _stETH);
         // burn user's shares
         _burn(_receiver, _shares);
         // collect protocol's fee
-        uint256 withdrawFee = (_shares * withdrawFeeBPS) / BPS;
+        withdrawFee += (_shares * withdrawFeeBPS) / BPS;
         reserves[address(stETH)] += withdrawFee;
         // convert nilla's shares to stETH amount
         uint256 amount = _stETH.getPooledEthByShares(_shares - withdrawFee);
@@ -85,7 +93,37 @@ contract LidoNillaLiquidityStaking is BaseNillaEarn {
         uint256 receivedETH = address(this).balance - ETHBefore;
         (bool success, ) = payable(_receiver).call{ value: receivedETH }("");
         require(success, "!withdraw");
+        // calculate new receiver's principal
+        // NOTE: Rate that we calculate fee is different from user's rate when withdrawing.
+        _updateNewPrincipals(_receiver, _stETH);
         emit Withdraw(msg.sender, _receiver, receivedETH);
         return receivedETH;
+    }
+
+    // internal function to calculate performance fee
+    function _calculatePerformanceFee(
+        address _receiver,
+        uint256 _principal,
+        IstETH _stETH
+    ) internal view returns (uint256 performanceFee) {
+        // Note: we used rate 1 stETH : 1 ETH for calculate performanceFee
+        // get current balance from current shares
+        if (_principal != 0) {
+            // get current balance from share
+            uint256 currentBal = _stETH.getPooledEthByShares(balanceOf(_receiver));
+            // calculate profit from current balance compared to latest known principal
+            uint256 profit = currentBal > _principal ? (currentBal - _principal) : 0;
+            // calculate performance fee
+            uint256 fee = profit.mulDiv(performanceFeeBPS, BPS);
+            // sum fee into the withdrawFee, convert to share
+            performanceFee = _stETH.getSharesByPooledEth(fee);
+        } else {
+            performanceFee = 0;
+        }
+    }
+
+    // internal function to update receiver's latest principal
+    function _updateNewPrincipals(address _receiver, IstETH _stETH) internal {
+        principals[_receiver] = _stETH.getPooledEthByShares(balanceOf(_receiver));
     }
 }

@@ -65,21 +65,25 @@ contract YearnNillaVault is BaseNillaEarn {
         //gas saving
         IERC20 _baseToken = baseToken;
         IYVToken _yvToken = yvToken;
-
+        uint256 principal = principals[_receiver];
+        uint256 pricePerShare = _yvToken.pricePerShare();
+        uint256 exchangeRatePrecision = 10 ** _decimals;
+        // calculate performace fee
+        uint256 depositFee = _calculatePerformanceFee(_receiver, principal, pricePerShare, exchangeRatePrecision);
         // transfer fund.
         uint256 baseTokenBefore = _baseToken.balanceOf(address(this));
         _baseToken.safeTransferFrom(msg.sender, address(this), _amount);
         uint256 receivedBaseToken = _baseToken.balanceOf(address(this)) - baseTokenBefore;
-
         // deposit to yearn.
         uint256 yvBefore = _yvToken.balanceOf(address(this));
         yearnPartnerTracker.deposit(address(_yvToken), PARTNER_ADDRESS, receivedBaseToken);
         uint256 receivedYVToken = _yvToken.balanceOf(address(this)) - yvBefore;
-
         // collect protocol's fee.
-        uint256 depositFee = (receivedYVToken * depositFeeBPS) / BPS;
+        depositFee += (receivedYVToken * depositFeeBPS) / BPS;
         reserves[address(_yvToken)] += depositFee;
         _mint(_receiver, receivedYVToken - depositFee);
+        // calculate new receiver's principal
+        _updateNewPrincipals(_receiver, _yvToken.pricePerShare(), exchangeRatePrecision);
         emit Deposit(msg.sender, _receiver, _amount);
         return receivedYVToken - depositFee;
     }
@@ -92,16 +96,53 @@ contract YearnNillaVault is BaseNillaEarn {
         // gas saving
         IERC20 _baseToken = baseToken;
         IYVToken _yvToken = yvToken;
+        uint256 principal = principals[_receiver];
+        uint256 pricePerShare = _yvToken.pricePerShare();
+        uint256 exchangeRatePrecision = 10 ** _decimals;
+        // calculate performance fee
+        uint256 withdrawFee = _calculatePerformanceFee(_receiver, principal, pricePerShare, exchangeRatePrecision);
         // burn user's shares
         _burn(_receiver, _shares);
         // collect protocol's fee
-        uint256 withdrawFee = (_shares * withdrawFeeBPS) / BPS;
+        withdrawFee += (_shares * withdrawFeeBPS) / BPS;
         reserves[address(_yvToken)] += withdrawFee;
         uint256 baseTokenBefore = _baseToken.balanceOf(address(this));
         // withdraw user's fund.
         _yvToken.withdraw(_shares - withdrawFee, _receiver, _maxLoss);
         uint256 receivedBaseToken = _baseToken.balanceOf(address(this)) - baseTokenBefore;
+        // calculate new receiver's principal
+        _updateNewPrincipals(_receiver, _yvToken.pricePerShare(), exchangeRatePrecision);
         emit Withdraw(msg.sender, _receiver, receivedBaseToken, _maxLoss);
         return receivedBaseToken;
+    }
+
+    // internal function to calculate performance fee
+    function _calculatePerformanceFee(
+        address _receiver,
+        uint256 _principal,
+        uint256 _pricePerShare,
+        uint256 _exchangeRatePrecision
+    ) internal view returns (uint256 performanceFee) {
+        // get current balance from current shares
+        if (_principal != 0) {
+            // get current balance from share
+            uint256 currentBal = (_pricePerShare * balanceOf(_receiver)) / _exchangeRatePrecision;
+            // calculate profit from current balance compared to latest known principal
+            uint256 profit = currentBal > _principal ? (currentBal - _principal) : 0;
+            // calculate performance fee
+            uint256 fee = (profit * performanceFeeBPS) / BPS;
+            // sum fee into the performanceFee, convert to share
+            performanceFee = (fee * _exchangeRatePrecision) / _pricePerShare;
+        } else performanceFee = 0;
+    }
+
+    // internal function to update receiver's latest principal
+    function _updateNewPrincipals(
+        address _receiver,
+        uint256 _pricePerShare,
+        uint256 _exchangeRatePrecision
+    ) internal {
+        // update new receiver's principal
+        principals[_receiver] = (_pricePerShare * balanceOf(_receiver)) / _exchangeRatePrecision;
     }
 }

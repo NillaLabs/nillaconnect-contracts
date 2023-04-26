@@ -12,4 +12,6 @@ interface ICToken is IERC20 {
     function mint(uint256) external returns (uint256);
 
     function redeem(uint256) external returns (uint256);
+
+    function exchangeRateCurrent() external returns (uint);
 }
