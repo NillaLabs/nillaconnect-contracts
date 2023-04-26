@@ -142,7 +142,7 @@ contract CompoundTest is Test {
         uint256 currentBal = (nilla.balanceOf(user) * uint256(cToken.exchangeRateCurrent())) / 1e18;
         uint256 profit = currentBal > principal ? (currentBal - principal) : 0;
         uint256 fee = (profit * 500) / 10_000;
-        withdrawFee += fee / uint256(cToken.exchangeRateCurrent()) / 1e18;
+        withdrawFee += (fee * 1e18) / uint256(cToken.exchangeRateCurrent());
 
         nilla.redeem(shares, user);
 
@@ -174,7 +174,7 @@ contract CompoundTest is Test {
         uint256 currentBal = (nilla.balanceOf(user) * uint256(cToken.exchangeRateCurrent())) / 1e18;
         uint256 profit = currentBal > principal ? (currentBal - principal) : 0;
         uint256 fee = (profit * 500) / 10_000;
-        withdrawFee += fee / uint256(cToken.exchangeRateCurrent()) / 1e18;
+        withdrawFee += (fee * 1e18) / uint256(cToken.exchangeRateCurrent());
 
         nilla.redeem(shares, user);
 

@@ -202,7 +202,7 @@ contract YVTest is Test {
         uint256 currentBal = (shares * yvToken.pricePerShare()) / RATE;
         uint256 profit = currentBal > principal ? (currentBal - principal) : 0;
         uint256 fee = (profit * 500) / 10_000;
-        uint256 withdrawFee = fee / yvToken.pricePerShare() / RATE;
+        uint256 withdrawFee = (fee * RATE) / yvToken.pricePerShare();
         withdrawFee += (shares * 1) / 10_000; // withdrawFeeBPS = 0.03% BPS 100%
 
         vault.redeem(shares, user, maxLoss);
@@ -270,7 +270,7 @@ contract YVTest is Test {
         uint256 currentBal = (shares * yvToken.pricePerShare()) / RATE;
         uint256 profit = currentBal > principal ? (currentBal - principal) : 0;
         uint256 fee = (profit * 500) / 10_000;
-        uint256 withdrawFee = fee / yvToken.pricePerShare() / RATE;
+        uint256 withdrawFee = (fee * RATE) / yvToken.pricePerShare();
 
         vault.redeem(shares, user, maxLoss);
 
