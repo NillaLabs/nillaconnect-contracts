@@ -23,21 +23,6 @@ CHAIN_ID = set_network("optimism")
 f_address = open(
     "./scripts/constants/address.json",
 )
-admin_abi = json.load(
-    open(
-        "./build/contracts/ProxyadminImpl.json",
-    )
-)
-aave_v3_no_rewards_abi = json.load(
-    open(
-        "./build/contracts/AaveV3NillaLendingPoolNoRewards.json",
-    )
-)
-yearn_abi = json.load(
-    open(
-        "./build/contracts/YearnNillaVault.json",
-    )
-)
 
 data_address = json.load(f_address)
 
@@ -46,7 +31,6 @@ yearn_address = data_address[CHAIN_ID]["YEARN_VAULT"]
 
 WETH = data_address[CHAIN_ID]["WETH"]
 AAVE_V3_POOL = data_address[CHAIN_ID]["AAVEV3_POOL"]
-YEARN_PARTNER_TRACKER = data_address[CHAIN_ID]["YEARN_PARTNER_TRACKER"]
 
 DEPOSIT_FEE_BPS = 0
 WITHDRAW_FEE_BPS = 0
