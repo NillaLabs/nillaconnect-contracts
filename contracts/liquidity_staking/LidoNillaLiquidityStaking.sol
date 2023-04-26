@@ -106,6 +106,7 @@ contract LidoNillaLiquidityStaking is BaseNillaEarn {
         uint256 _principal,
         IstETH _stETH
     ) internal view returns (uint256 performanceFee) {
+        // Note: we used rate 1 stETH : 1 ETH for calculate performanceFee
         // get current balance from current shares
         if (_principal != 0) {
             // get current balance from share
