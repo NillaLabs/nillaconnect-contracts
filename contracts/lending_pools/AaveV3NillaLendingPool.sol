@@ -88,8 +88,9 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
         // gas saving
         IERC20 _baseToken = baseToken;
         IAToken _aToken = aToken;
+        IAaveLendingPoolV3 _POOL = POOL;
         uint256 principal = principals[_receiver];
-        uint256 reserveNormalizedIncome = POOL.getReserveNormalizedIncome(address(_baseToken));
+        uint256 reserveNormalizedIncome = _POOL.getReserveNormalizedIncome(address(_baseToken));
         // calculate performance fee
         uint256 depositFee = _calculatePerformanceFee(
             _receiver,
@@ -102,25 +103,25 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
         uint256 receivedBaseToken = _baseToken.balanceOf(address(this)) - baseTokenBefore;
         // supply to Aave V3, using share instead.
         uint256 aTokenShareBefore = _aToken.scaledBalanceOf(address(this));
-        POOL.supply(address(_baseToken), receivedBaseToken, address(this), 0);
+        _POOL.supply(address(_baseToken), receivedBaseToken, address(this), 0);
         uint256 receivedAToken = _aToken.scaledBalanceOf(address(this)) - aTokenShareBefore;
         // collect protocol's fee.
         depositFee += receivedAToken.mulDiv(depositFeeBPS, BPS);
         reserves[address(_aToken)] += depositFee;
         _mint(_receiver, receivedAToken - depositFee);
         // calculate new receiver's principal
-        _updateNewPrincipals(_receiver, POOL.getReserveNormalizedIncome(address(_baseToken)));
+        _updateNewPrincipals(_receiver, _POOL.getReserveNormalizedIncome(address(_baseToken)));
         emit Deposit(msg.sender, _receiver, _amount);
         return (receivedAToken - depositFee);
     }
 
     function redeem(uint256 _shares, address _receiver) external nonReentrant returns (uint256) {
         // gas saving
-        IAaveLendingPoolV3 _pool = POOL;
+        IAaveLendingPoolV3 _POOL = POOL;
         address _baseToken = address(baseToken);
         IAToken _aToken = aToken;
         uint256 principal = principals[_receiver];
-        uint256 reserveNormalizedIncome = _pool.getReserveNormalizedIncome(address(_baseToken));
+        uint256 reserveNormalizedIncome = _POOL.getReserveNormalizedIncome(address(_baseToken));
         // calculate performance fee
         uint256 withdrawFee = _calculatePerformanceFee(
             _receiver,
@@ -134,7 +135,7 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
         uint256 shareAfterFee = _shares - withdrawFee;
         // withdraw user's fund.
         uint256 aTokenShareBefore = _aToken.scaledBalanceOf(address(this));
-        uint256 receivedBaseToken = _pool.withdraw(
+        uint256 receivedBaseToken = _POOL.withdraw(
             _baseToken,
             shareAfterFee.mulDiv(reserveNormalizedIncome, RAY, Math.Rounding.Down), // aToken amount rounding down
             _receiver
@@ -144,7 +145,7 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
         uint256 dust = shareAfterFee - burnedATokenShare;
         reserves[address(aToken)] += (withdrawFee + dust);
         // calculate new receiver's principal
-        _updateNewPrincipals(_receiver, POOL.getReserveNormalizedIncome(address(_baseToken)));
+        _updateNewPrincipals(_receiver, _POOL.getReserveNormalizedIncome(address(_baseToken)));
         emit Withdraw(msg.sender, _receiver, receivedBaseToken);
         return receivedBaseToken;
     }
@@ -175,6 +176,7 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
         IAToken _aToken = aToken;
         IWNative _wNative = IWNative(WNATIVE);
         IERC20 _baseToken = baseToken;
+        IAaveLendingPoolV3 _POOL = POOL;
         // claim rewards from rewardController
         uint256 receivedWETH = _claimeRewards(_aToken, _wNative);
         require(receivedWETH > 0, "No rewards to harvest");
@@ -190,7 +192,7 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
             _deadline
         );
         uint256 receivedBase = _baseToken.balanceOf(address(this)) - baseTokenBefore;
-        _reinvest(_wNative, address(_baseToken), botFee, receivedBase); // alredy sub botFee when swap()
+        _reinvest(_wNative, address(_baseToken), botFee, receivedBase, _POOL); // alredy sub botFee when swap()
     }
 
     // NOTE: internal function to avoid stack-too-deep
@@ -211,14 +213,15 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
         IWNative _wNative,
         address _baseToken,
         uint256 _botFee,
-        uint256 _amount
+        uint256 _amount,
+        IAaveLendingPoolV3 _POOL
     ) internal {
         _wNative.withdraw(_botFee);
         (bool _success, ) = payable(HARVEST_BOT).call{ value: _botFee }("");
         require(_success, "Failed to send Ethers to bot");
         // re-supply into pool
-        POOL.supply(address(_baseToken), _amount, address(this), 0);
-        emit Reinvest(address(POOL), _amount);
+        _POOL.supply(address(_baseToken), _amount, address(this), 0);
+        emit Reinvest(address(_POOL), _amount);
     }
 
     // internal function to calculate performance fee
@@ -240,7 +243,9 @@ contract AaveV3NillaLendingPool is BaseNillaEarn {
             uint256 fee = profit.mulDiv(performanceFeeBPS, BPS);
             // sum fee into the fee
             performanceFee = fee.mulDiv(RAY, _reserveNormalizedIncome, Math.Rounding.Down);
-        } else performanceFee = 0;
+        } else {
+            performanceFee = 0;
+        }
     }
 
     // internal function to update receiver's latest principal

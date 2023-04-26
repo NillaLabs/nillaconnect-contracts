@@ -116,7 +116,9 @@ contract LidoNillaLiquidityStaking is BaseNillaEarn {
             uint256 fee = profit.mulDiv(performanceFeeBPS, BPS);
             // sum fee into the withdrawFee, convert to share
             performanceFee = _stETH.getSharesByPooledEth(fee);
-        } else performanceFee = 0;
+        } else {
+            performanceFee = 0;
+        }
     }
 
     // internal function to update receiver's latest principal

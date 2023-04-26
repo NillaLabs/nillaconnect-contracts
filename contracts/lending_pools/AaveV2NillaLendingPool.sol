@@ -75,7 +75,10 @@ contract AaveV2NillaLendingPool is BaseNillaEarn {
         reserves[address(_aToken)] += depositFee;
         _mint(_receiver, received - depositFee);
         // calculate new receiver's principal, avoiding stack-too-deep
-        _updateNewPrincipals(_receiver, reserveNormalizedIncome);
+        _updateNewPrincipals(
+            _receiver,
+            _lendingPool.getReserveNormalizedIncome(address(_baseToken))
+        );
         emit Deposit(msg.sender, _receiver, _amount);
         return (received - depositFee);
     }
@@ -98,7 +101,10 @@ contract AaveV2NillaLendingPool is BaseNillaEarn {
         // burn user's shares
         _burn(_receiver, _shares);
         // calculate new receiver's principal, avoiding stack-too-deep
-        _updateNewPrincipals(_receiver, reserveNormalizedIncome);
+        _updateNewPrincipals(
+            _receiver,
+            _lendingPool.getReserveNormalizedIncome(address(_baseToken))
+        );
         // collect protocol's fee.
         withdrawFee += (_shares * withdrawFeeBPS) / BPS;
         uint256 shareAfterFee = _shares - withdrawFee;
@@ -154,7 +160,9 @@ contract AaveV2NillaLendingPool is BaseNillaEarn {
             uint256 fee = profit.mulDiv(performanceFeeBPS, BPS);
             // sum fee into the fee
             performanceFee = fee.mulDiv(RAY, _reserveNormalizedIncome, Math.Rounding.Down);
-        } else performanceFee = 0;
+        } else {
+            performanceFee = 0;
+        }
     }
 
     function _updateNewPrincipals(address _receiver, uint256 _reserveNormalizedIncome) internal {

@@ -29,6 +29,8 @@ contract CompoundNillaLendingPool is BaseNillaEarn {
 
     IERC20 public constant COMP = IERC20(0xc00e94Cb662C3520282E6f5717214004A7f26888);
 
+    uint256 constant exchangeRatePrecision = 1e18;
+
     event Deposit(address indexed depositor, address indexed receiver, uint256 amount);
     event Withdraw(address indexed withdrawer, address indexed receiver, uint256 amount);
     event Reinvest(uint256 amount);
@@ -192,19 +194,21 @@ contract CompoundNillaLendingPool is BaseNillaEarn {
         // get current balance from current shares
         if (_principal != 0) {
             // get current balance from share
-            uint256 currentBal = (_exchangeRate * balanceOf(_receiver)) / 1e18;
+            uint256 currentBal = (_exchangeRate * balanceOf(_receiver)) / exchangeRatePrecision;
             // calculate profit from current balance compared to latest known principal
             uint256 profit = currentBal > _principal ? (currentBal - _principal) : 0;
             // calculate performance fee
             uint256 fee = (profit * performanceFeeBPS) / BPS;
             // sum fee into the performanceFee, convert to share
-            performanceFee = fee / _exchangeRate / 1e18;
-        } else performanceFee = 0;
+            performanceFee = (fee * exchangeRatePrecision) / _exchangeRate;
+        } else {
+            performanceFee = 0;
+        }
     }
 
     // internal function to update receiver's latest principal
     function _updateNewPrincipals(address _receiver, uint256 _exchangeRate) internal {
         // update new receiver's principal
-        principals[_receiver] = (_exchangeRate * balanceOf(_receiver)) / 1e18;
+        principals[_receiver] = (_exchangeRate * balanceOf(_receiver)) / exchangeRatePrecision;
     }
 }
