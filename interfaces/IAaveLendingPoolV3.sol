@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.17;
 
 interface IAaveLendingPoolV3 {
@@ -65,12 +65,9 @@ interface IAaveLendingPoolV3 {
         uint16 referralCode
     ) external;
 
-    function withdraw(
-        address asset,
-        uint256 amount,
-        address to
-    ) external returns (uint256);
+    function withdraw(address asset, uint256 amount, address to) external returns (uint256);
 
     function getReserveNormalizedIncome(address asset) external view returns (uint256);
+
     function getReserveData(address asset) external view returns (ReserveData memory);
 }
