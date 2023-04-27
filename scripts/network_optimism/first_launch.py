@@ -14,7 +14,7 @@ from brownie import (
 )
 from scripts.utils.utils import *
 
-# network.gas_price("0.001 gwei")
+network.gas_price("0.001 gwei")
 
 load_dotenv()
 
@@ -36,8 +36,8 @@ DEPOSIT_FEE_BPS = 0
 WITHDRAW_FEE_BPS = 0
 PERFORMANCE_FEE_BPS = 500
 
-# deployer = Account.from_mnemonic(os.getenv("MNEMONIC"))  # NOTE: Change address later
-# accounts.add(deployer.privateKey)
+deployer = Account.from_mnemonic(os.getenv("MNEMONIC"))  # NOTE: Change address later
+accounts.add(deployer.privateKey)
 deployer = accounts[0]
 
 HARVEST_BOT = "0x6f650AE486eFc27BeEFb8Dc84000F63acA99735f"  # NOTE Change later
@@ -53,8 +53,8 @@ def main():
     # gateway_vault = NativeGatewayVault.deploy(WETH, {'from': deployer})
 
     # ---------- Deploy AAVE V3's ----------
-    impl_aave_v3_no_rewards = AaveV3NillaLendingPoolNoRewards.deploy(
-        WETH, AAVE_V3_POOL, {"from": deployer}
+    impl_aave_v3_no_rewards = AaveV3NillaLendingPoolNoRewards.at(
+        "0xf216e98136d9d4F86bE951641be0fDB076B6be30"
     )
 
     for token in aave_v3_address:
