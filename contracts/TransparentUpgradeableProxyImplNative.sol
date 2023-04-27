@@ -1,12 +1,11 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL-1.1
 
 pragma solidity ^0.8.17;
 
 import "OpenZeppelin/openzeppelin-contracts@4.7.3/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 contract TransparentUpgradeableProxyImplNative is TransparentUpgradeableProxy {
-
-    address immutable public WETH;
+    address public immutable WETH;
 
     constructor(
         address _logic,
@@ -18,6 +17,6 @@ contract TransparentUpgradeableProxyImplNative is TransparentUpgradeableProxy {
     }
 
     receive() external payable override {
-        require(msg.sender == address(WETH), 'Receive not allowed');
+        require(msg.sender == address(WETH), "Receive not allowed");
     }
 }

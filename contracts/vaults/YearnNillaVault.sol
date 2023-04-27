@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL-1.1
 
 pragma solidity ^0.8.17;
 
@@ -69,7 +69,12 @@ contract YearnNillaVault is BaseNillaEarn {
         uint256 pricePerShare = _yvToken.pricePerShare();
         uint256 exchangeRatePrecision = 10 ** _decimals;
         // calculate performace fee
-        uint256 depositFee = _calculatePerformanceFee(_receiver, principal, pricePerShare, exchangeRatePrecision);
+        uint256 depositFee = _calculatePerformanceFee(
+            _receiver,
+            principal,
+            pricePerShare,
+            exchangeRatePrecision
+        );
         // transfer fund.
         uint256 baseTokenBefore = _baseToken.balanceOf(address(this));
         _baseToken.safeTransferFrom(msg.sender, address(this), _amount);
@@ -100,7 +105,12 @@ contract YearnNillaVault is BaseNillaEarn {
         uint256 pricePerShare = _yvToken.pricePerShare();
         uint256 exchangeRatePrecision = 10 ** _decimals;
         // calculate performance fee
-        uint256 withdrawFee = _calculatePerformanceFee(_receiver, principal, pricePerShare, exchangeRatePrecision);
+        uint256 withdrawFee = _calculatePerformanceFee(
+            _receiver,
+            principal,
+            pricePerShare,
+            exchangeRatePrecision
+        );
         // burn user's shares
         _burn(_receiver, _shares);
         // collect protocol's fee
