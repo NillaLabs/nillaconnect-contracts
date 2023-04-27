@@ -14,7 +14,7 @@ from brownie import (
 )
 from scripts.utils.utils import *
 
-network.gas_price("0.001 gwei")
+# network.gas_price("0.001 gwei")
 
 load_dotenv()
 
@@ -36,12 +36,10 @@ DEPOSIT_FEE_BPS = 0
 WITHDRAW_FEE_BPS = 0
 PERFORMANCE_FEE_BPS = 500
 
-#  NOTE: Uncomment this when deploying on main.
-# deployer = Account.from_mnemonic(
-#     os.getenv("MNEMONIC"))  # NOTE: Change address later
+# deployer = Account.from_mnemonic(os.getenv("MNEMONIC"))  # NOTE: Change address later
 # accounts.add(deployer.privateKey)
+deployer = accounts[0]
 
-# deployer = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266'
 HARVEST_BOT = "0x6f650AE486eFc27BeEFb8Dc84000F63acA99735f"  # NOTE Change later
 WORKER_BOT = "0x6f650AE486eFc27BeEFb8Dc84000F63acA99735f"  # NOTE Change later
 MULTISIG_WALLET = "0x6f650AE486eFc27BeEFb8Dc84000F63acA99735f"  # OP's
@@ -51,12 +49,12 @@ def main():
     # Can globally deploy once for each network!
     admin = ProxyAdminImpl.at("0x85774d5Fc82EDC9633624c009F0edfAD2DDebA1C")
 
-    # gateway = NativeGateway.deploy(WETH, {'from': accounts[0]})
-    # gateway_vault = NativeGatewayVault.deploy(WETH, {'from': accounts[0]})
+    # gateway = NativeGateway.deploy(WETH, {'from': deployer})
+    # gateway_vault = NativeGatewayVault.deploy(WETH, {'from': deployer})
 
     # ---------- Deploy AAVE V3's ----------
     impl_aave_v3_no_rewards = AaveV3NillaLendingPoolNoRewards.deploy(
-        WETH, AAVE_V3_POOL, {"from": accounts[0]}, publish_source=True
+        WETH, AAVE_V3_POOL, {"from": deployer}
     )
 
     for token in aave_v3_address:
@@ -74,8 +72,7 @@ def main():
             admin,
             aave_v3_initilize_encoded,
             WETH,
-            {"from": accounts[0]},
-            publish_source=True,
+            {"from": deployer},
         )
         aave_v3_lp = Contract.from_abi(
             "AaveV3NillaLendingPool",
