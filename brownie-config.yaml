@@ -34,9 +34,9 @@ compiler:
       enabled: true
       runs: 200
     remappings:
-      - "forge-std/=lib/forge-std/src/"
-      - "OpenZeppelin/openzeppelin-contracts@4.7.3/=lib/openzeppelin-contracts/"
-      - "OpenZeppelin/openzeppelin-contracts-upgradeable@4.7.3/=lib/openzeppelin-contracts-upgradeable/"
+      - "forge-std=/Users/boomstb/Developer/mvp-earn/lib/forge-std/src/"
+      - "OpenZeppelin/openzeppelin-contracts@4.7.3=/Users/boomstb/Developer/mvp-earn/lib/openzeppelin-contracts/"
+      - "OpenZeppelin/openzeppelin-contracts-upgradeable@4.7.3=/Users/boomstb/Developer/mvp-earn/lib/openzeppelin-contracts-upgradeable/"
   vyper:
     version: null
 
