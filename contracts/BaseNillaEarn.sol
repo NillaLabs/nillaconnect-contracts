@@ -62,6 +62,7 @@ contract BaseNillaEarn is ERC20Upgradeable, ReentrancyGuardUpgradeable, OwnableU
 
     function setPerformanceFeeBPS(uint16 _performanceFeeBPS) external onlyOwner {
         require(_performanceFeeBPS <= 2000, "fee too much"); // max fee = 20%
+        performanceFeeBPS = _performanceFeeBPS;
         emit SetPerformanceFee(_performanceFeeBPS);
     }
 
