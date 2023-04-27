@@ -21,10 +21,10 @@ data_address = json.load(f_address)
 aave_v3_address = data_address[CHAIN_ID]["AAVEV3_ATOKEN"]
 yearn_address = data_address[CHAIN_ID]["YEARN_VAULT"]
 
-# deployer = Account.from_mnemonic(
-#     os.getenv("MNEMONIC"))  # NOTE: Change address later
-# accounts.add(deployer.privateKey)
-deployer = "0xC022E7Ab9BED4874B7879d5Beaa6De5e12160Fae"
+deployer = Account.from_mnemonic(os.getenv("MNEMONIC"))  # NOTE: Change address later
+accounts.add(deployer.privateKey)
+deployer = accounts[0]
+
 WETH = data_address[CHAIN_ID]["WETH"]
 AAVE_V3_POOL = data_address[CHAIN_ID]["AAVEV3_POOL"]
 YEARN_PARTNER_TRACKER = data_address[CHAIN_ID]["YEARN_PARTNER_TRACKER"]
@@ -33,7 +33,7 @@ DEPOSIT_FEE_BPS = 0
 WITHDRAW_FEE_BPS = 0
 PERFORMANCE_FEE_BPS = 500  # 5%
 
-MULTISIG_WALLET = "0x6f650AE486eFc27BeEFb8Dc84000F63acA99735f"  # OP's
+MULTISIG_WALLET = "0x6f650AE486eFc27BeEFb8Dc84000F63acA99735f"  # OP's Nilla
 
 accounts[0].transfer(deployer, "10 ethers")
 
