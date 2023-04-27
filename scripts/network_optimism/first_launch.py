@@ -53,34 +53,34 @@ def main():
     # gateway_vault = NativeGatewayVault.deploy(WETH, {'from': deployer})
 
     # ---------- Deploy AAVE V3's ----------
-    impl_aave_v3_no_rewards = AaveV3NillaLendingPoolNoRewards.at(
-        "0xf216e98136d9d4F86bE951641be0fDB076B6be30"
-    )
+    # impl_aave_v3_no_rewards = AaveV3NillaLendingPoolNoRewards.at(
+    #     "0xf216e98136d9d4F86bE951641be0fDB076B6be30"
+    # )
 
-    for token in aave_v3_address:
-        aave_v3_initilize_encoded = encode_function_data(
-            impl_aave_v3_no_rewards.initialize,
-            aave_v3_address[token],
-            f"{token} AAVE V3-Nilla LP",
-            "na" + str(token),
-            DEPOSIT_FEE_BPS,
-            WITHDRAW_FEE_BPS,
-            PERFORMANCE_FEE_BPS,
-        )
-        proxy_impl_aave_v3_no_rewards = TransparentUpgradeableProxyImplNative.deploy(
-            impl_aave_v3_no_rewards,
-            admin,
-            aave_v3_initilize_encoded,
-            WETH,
-            {"from": deployer},
-        )
-        aave_v3_lp = Contract.from_abi(
-            "AaveV3NillaLendingPool",
-            proxy_impl_aave_v3_no_rewards.address,
-            impl_aave_v3_no_rewards.abi,
-        )
-        print(
-            f"AAVE V3:- Proxy LP {token}",
-            aave_v3_lp,
-            "\n -----------------------------------------------------",
-        )
+    # for token in aave_v3_address:
+    #     aave_v3_initilize_encoded = encode_function_data(
+    #         impl_aave_v3_no_rewards.initialize,
+    #         aave_v3_address[token],
+    #         f"{token} AAVE V3-Nilla LP",
+    #         "na" + str(token),
+    #         DEPOSIT_FEE_BPS,
+    #         WITHDRAW_FEE_BPS,
+    #         PERFORMANCE_FEE_BPS,
+    #     )
+    #     proxy_impl_aave_v3_no_rewards = TransparentUpgradeableProxyImplNative.deploy(
+    #         impl_aave_v3_no_rewards,
+    #         admin,
+    #         aave_v3_initilize_encoded,
+    #         WETH,
+    #         {"from": deployer},
+    #     )
+    #     aave_v3_lp = Contract.from_abi(
+    #         "AaveV3NillaLendingPool",
+    #         proxy_impl_aave_v3_no_rewards.address,
+    #         impl_aave_v3_no_rewards.abi,
+    #     )
+    #     print(
+    #         f"AAVE V3:- Proxy LP {token}",
+    #         aave_v3_lp,
+    #         "\n -----------------------------------------------------",
+    #     )
