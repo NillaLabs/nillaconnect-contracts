@@ -17,7 +17,7 @@ from brownie import (
 )
 from scripts.utils.utils import *
 
-network.max_fee("20 gwei")
+network.max_fee("38 gwei")
 network.priority_fee("1 gwei")
 
 load_dotenv()
@@ -48,9 +48,10 @@ HARVEST_FEE_BPS = 100
 PERFORMANCE_FEE_BPS = 500
 
 # NOTE: Uncomment this when deploying on main.
-# deployer = Account.from_mnemonic(
-#     os.getenv("MNEMONIC"))  # NOTE: Change address later
-# accounts.add(deployer.privateKey)
+deployer = Account.from_mnemonic(os.getenv("MNEMONIC"))  # NOTE: Change address later
+accounts.add(deployer.privateKey)
+deployer = accounts[0]
+
 deployer = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 HARVEST_BOT = "0x6f650AE486eFc27BeEFb8Dc84000F63acA99735f"  # NOTE Change later
 WORKER_BOT = "0x6f650AE486eFc27BeEFb8Dc84000F63acA99735f"  # NOTE Change later
@@ -59,12 +60,14 @@ MULTISIG_WALLET = "0x6f650AE486eFc27BeEFb8Dc84000F63acA99735f"  # NOTE Change la
 
 def main():
     # Can globally deploy once for each network!
-    admin = ProxyAdminImpl.deploy({"from": deployer})
-    gateway = NativeGateway.deploy(WETH, {"from": deployer})
-    gateway_vault = NativeGatewayVault.deploy(WETH, {"from": deployer})
+    admin = ProxyAdminImpl.deploy({"from": deployer}, publish_source=True)
+    gateway = NativeGateway.deploy(WETH, {"from": deployer}, publish_source=True)
+    gateway_vault = NativeGatewayVault.deploy(
+        WETH, {"from": deployer}, publish_source=True
+    )
 
     # ---------- Deploy Yearn's ----------
-    impl_yearn = YearnNillaVault.deploy({"from": deployer})
+    impl_yearn = YearnNillaVault.deploy({"from": deployer}, publish_source=True)
     for token in yearn_address:
         yearn_initilize_encoded = encode_function_data(
             impl_yearn.initialize,
@@ -82,19 +85,12 @@ def main():
             admin,
             yearn_initilize_encoded,
             {"from": deployer},
-        )
-        yearn_vault = Contract.from_abi(
-            "YearnNillaVault", proxy_impl_yearn.address, impl_yearn.abi
-        )
-        print(
-            f"Yearn:- Proxy Vault {token}:",
-            yearn_vault,
-            "\n -----------------------------------------------------",
+            publish_source=True,
         )
 
     # ---------- Deploy Lido's ----------
     impl_lido = LidoNillaLiquidityStaking.deploy(
-        lido_address["STETH"], {"from": deployer}
+        lido_address["STETH"], {"from": deployer}, publish_source=True
     )
     lido_initilize_encoded = encode_function_data(
         impl_lido.initialize,
@@ -111,14 +107,7 @@ def main():
         lido_initilize_encoded,
         lido_address["CURVE_POOL"],  # accept WETH from pool
         {"from": deployer},
-    )
-    lido_liquidstaking = Contract.from_abi(
-        "LidoNillaLiquidityStaking", proxy_impl_lido.address, impl_lido.abi
-    )
-    print(
-        "Lido:-",
-        lido_liquidstaking,
-        "\n -----------------------------------------------------",
+        publish_source=True,
     )
 
     # NOTE: Leave COMPOUND out of scope for Beta.
@@ -137,10 +126,11 @@ def main():
     #         HARVEST_FEE_BPS,
     #         PERFORMANCE_FEE_BPS,
     #     )
-    #     proxy_impl_compound = TransparentUpgradeableProxyImpl.deploy(
+    #     proxy_impl_compound = TransparentUpgradeableProxyImplNative.deploy(
     #         impl_compound,
     #         admin,
     #         compound_initilize_encoded,
+    #         WETH,
     #         {'from': deployer}
     #     )
     #     compound_lp = Contract.from_abi("CompoundNillaLendingPool", proxy_impl_compound.address, impl_compound.abi)

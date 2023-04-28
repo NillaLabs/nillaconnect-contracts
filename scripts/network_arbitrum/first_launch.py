@@ -11,7 +11,7 @@ from brownie import (
 )
 from scripts.utils.utils import *
 
-network.gas_price("0.11 gwei")
+network.gas_price("0.1 gwei")
 
 load_dotenv()
 
@@ -32,22 +32,19 @@ WITHDRAW_FEE_BPS = 0
 PERFORMANCE_FEE_BPS = 500
 
 # NOTE: Uncomment this when deploying on main.
-# deployer = Account.from_mnemonic(
-#     os.getenv("MNEMONIC"))  # NOTE: Change address later
-# accounts.add(deployer.privateKey)
-deployer = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
-HARVEST_BOT = "0x6f650AE486eFc27BeEFb8Dc84000F63acA99735f"  # NOTE Change later
-WORKER_BOT = "0x6f650AE486eFc27BeEFb8Dc84000F63acA99735f"  # NOTE Change later
+deployer = Account.from_mnemonic(os.getenv("MNEMONIC"))  # NOTE: Change address later
+accounts.add(deployer.privateKey)
+deployer = accounts[0]
 
 
 def main():
     # Can globally deploy once for each network!
-    admin = ProxyAdminImpl.deploy({"from": deployer})
-    gateway = NativeGateway.deploy(WETH, {"from": deployer})
+    admin = ProxyAdminImpl.deploy({"from": deployer}, publish_source=True)
+    gateway = NativeGateway.deploy(WETH, {"from": deployer}, publish_source=True)
 
     # ---------- Deploy AAVE V3's ----------
     impl_aave_v3_no_rewards = AaveV3NillaLendingPoolNoRewards.deploy(
-        WETH, AAVE_V3_POOL, {"from": deployer}
+        WETH, AAVE_V3_POOL, {"from": deployer}, publish_source=True
     )
     for token in aave_v3_address:
         aave_v3_initilize_encoded = encode_function_data(
@@ -65,14 +62,5 @@ def main():
             aave_v3_initilize_encoded,
             WETH,
             {"from": deployer},
-        )
-        aave_v3_lp = Contract.from_abi(
-            "AaveV3NillaLendingPoolNoRewards",
-            proxy_impl_aave_v3_no_rewards.address,
-            impl_aave_v3_no_rewards.abi,
-        )
-        print(
-            f"AAVE V3:- Proxy LP {token}",
-            aave_v3_lp,
-            "\n -----------------------------------------------------",
+            publish_source=True,
         )
