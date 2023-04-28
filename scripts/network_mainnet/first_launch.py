@@ -55,19 +55,17 @@ deployer = accounts[0]
 deployer = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 HARVEST_BOT = "0x6f650AE486eFc27BeEFb8Dc84000F63acA99735f"  # NOTE Change later
 WORKER_BOT = "0x6f650AE486eFc27BeEFb8Dc84000F63acA99735f"  # NOTE Change later
-MULTISIG_WALLET = "0x6f650AE486eFc27BeEFb8Dc84000F63acA99735f"  # NOTE Change later
+MULTISIG_WALLET = "0x9d22b49B4008D1CcaA6D62292327Fe34B670E756"  # Nilla's eth multi-sig
 
 
 def main():
     # Can globally deploy once for each network!
-    admin = ProxyAdminImpl.deploy({"from": deployer}, publish_source=True)
-    gateway = NativeGateway.deploy(WETH, {"from": deployer}, publish_source=True)
-    gateway_vault = NativeGatewayVault.deploy(
-        WETH, {"from": deployer}, publish_source=True
-    )
+    admin = ProxyAdminImpl.deploy({"from": deployer})
+    gateway = NativeGateway.deploy(WETH, {"from": deployer})
+    gateway_vault = NativeGatewayVault.deploy(WETH, {"from": deployer})
 
     # ---------- Deploy Yearn's ----------
-    impl_yearn = YearnNillaVault.deploy({"from": deployer}, publish_source=True)
+    impl_yearn = YearnNillaVault.deploy({"from": deployer})
     for token in yearn_address:
         yearn_initilize_encoded = encode_function_data(
             impl_yearn.initialize,
@@ -85,12 +83,12 @@ def main():
             admin,
             yearn_initilize_encoded,
             {"from": deployer},
-            publish_source=True,
         )
 
     # ---------- Deploy Lido's ----------
     impl_lido = LidoNillaLiquidityStaking.deploy(
-        lido_address["STETH"], {"from": deployer}, publish_source=True
+        lido_address["STETH"],
+        {"from": deployer},
     )
     lido_initilize_encoded = encode_function_data(
         impl_lido.initialize,
@@ -107,7 +105,6 @@ def main():
         lido_initilize_encoded,
         lido_address["CURVE_POOL"],  # accept WETH from pool
         {"from": deployer},
-        publish_source=True,
     )
 
     # NOTE: Leave COMPOUND out of scope for Beta.
