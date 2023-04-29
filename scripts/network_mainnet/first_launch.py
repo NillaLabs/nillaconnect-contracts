@@ -52,14 +52,14 @@ MULTISIG_WALLET = "0x9d22b49B4008D1CcaA6D62292327Fe34B670E756"  # Nilla's eth mu
 
 def main():
     # Can globally deploy once for each network!
-    admin = ProxyAdminImpl.deploy({"from": deployer}, publish_source=True)
-    gateway = NativeGateway.deploy(WETH, {"from": deployer}, publish_source=True)
-    gateway_vault = NativeGatewayVault.deploy(
-        WETH, {"from": deployer}, publish_source=True
-    )
+    admin = ProxyAdminImpl.at("0x23fd7cC7799c2Ab48B670f712636cA97D0b47723")
+    # gateway = NativeGateway.deploy(WETH, {"from": deployer}, publish_source=True)
+    # gateway_vault = NativeGatewayVault.deploy(
+    #     WETH, {"from": deployer}, publish_source=True
+    # )
 
     # ---------- Deploy Yearn's ----------
-    impl_yearn = YearnNillaVault.deploy({"from": deployer}, publish_source=True)
+    impl_yearn = YearnNillaVault.at("0xd01f4083cb30a668B560Ed47228D59f90A768973")
     for token in yearn_address:
         yearn_initilize_encoded = encode_function_data(
             impl_yearn.initialize,

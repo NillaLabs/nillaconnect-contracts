@@ -3,9 +3,9 @@ module.exports = {
   networks: {
     hardhat: {
       forking: {
-        url: 'https://endpoints.omniatech.io/v1/op/mainnet/public',
+        url: 'https://ethereum.publicnode.com',
       },
-      chainId: 10
+      chainId: 1
     }
   },
 };
