@@ -11,7 +11,7 @@ from brownie import (
 )
 from scripts.utils.utils import *
 
-network.gas_price("0.11 gwei")
+network.gas_price("0.1 gwei")
 
 load_dotenv()
 
@@ -32,12 +32,9 @@ WITHDRAW_FEE_BPS = 0
 PERFORMANCE_FEE_BPS = 500
 
 # NOTE: Uncomment this when deploying on main.
-# deployer = Account.from_mnemonic(
-#     os.getenv("MNEMONIC"))  # NOTE: Change address later
-# accounts.add(deployer.privateKey)
-deployer = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
-HARVEST_BOT = "0x6f650AE486eFc27BeEFb8Dc84000F63acA99735f"  # NOTE Change later
-WORKER_BOT = "0x6f650AE486eFc27BeEFb8Dc84000F63acA99735f"  # NOTE Change later
+deployer = Account.from_mnemonic(os.getenv("MNEMONIC"))  # NOTE: Change address later
+accounts.add(deployer.privateKey)
+deployer = accounts[0]
 
 
 def main():
@@ -66,14 +63,4 @@ def main():
             WETH,
             {"from": deployer},
             publish_source=True,
-        )
-        aave_v3_lp = Contract.from_abi(
-            "AaveV3NillaLendingPoolNoRewards",
-            proxy_impl_aave_v3_no_rewards.address,
-            impl_aave_v3_no_rewards.abi,
-        )
-        print(
-            f"AAVE V3:- Proxy LP {token}",
-            aave_v3_lp,
-            "\n -----------------------------------------------------",
         )

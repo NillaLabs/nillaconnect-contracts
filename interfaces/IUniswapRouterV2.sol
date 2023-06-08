@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL-1.1
 
 pragma solidity ^0.8.17;
 
@@ -11,10 +11,10 @@ interface IUniswapRouterV2 {
         uint256 deadline
     ) external returns (uint256[] memory amounts);
 
-    function getAmountsOut(uint256 amountIn, address[] memory path)
-        external
-        view
-        returns (uint256[] memory amounts);
+    function getAmountsOut(
+        uint256 amountIn,
+        address[] memory path
+    ) external view returns (uint256[] memory amounts);
 
     function swapExactETHForTokens(
         uint256 amountOutMin,

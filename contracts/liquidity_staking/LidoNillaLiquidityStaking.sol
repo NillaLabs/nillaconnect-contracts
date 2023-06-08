@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL-1.1
 
 pragma solidity ^0.8.17;
 
@@ -42,7 +42,7 @@ contract LidoNillaLiquidityStaking is BaseNillaEarn {
     }
 
     function decimals() public view virtual override returns (uint8) {
-        return _decimals;
+        return uint8(18);
     }
 
     function deposit(address _receiver) external payable nonReentrant returns (uint256) {
