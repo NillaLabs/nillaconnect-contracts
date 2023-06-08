@@ -1,1 +1,1 @@
-# NillaConnect Smart Contracts
+# N-vault Smart Contracts
